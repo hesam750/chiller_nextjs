@@ -119,5 +119,16 @@
       "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
       "role": "viewer"
     }
-  ]
+  ],
+  "chillers": [
+    {
+      "id": "46fced7c9d284863",
+      "name": "smt",
+      "ip": "10.61.44.58",
+      "active": true,
+      "createdAt": "2025-12-29T14:38:11.220Z",
+      "updatedAt": "2025-12-29T14:38:11.220Z"
+    }
+  ],
+  "timers": []
 }

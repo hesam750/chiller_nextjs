@@ -84,7 +84,16 @@ export function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/auth/me")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) return { role: "guest" };
+        const t = await r.text().catch(() => "");
+        if (!t) return { role: "guest" };
+        try {
+          return JSON.parse(t);
+        } catch {
+          return { role: "guest" };
+        }
+      })
       .then((j) => {
         const r0 = j && typeof j.role === "string" ? j.role : "guest";
         const rr: "admin" | "manager" | "viewer" | "guest" =
@@ -99,9 +108,19 @@ export function DashboardPage() {
       .catch(() => setRole("guest"));
 
     fetch("/api/chillers")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) return { items: [] };
+        const t = await r.text().catch(() => "");
+        if (!t) return { items: [] };
+        try {
+          return JSON.parse(t);
+        } catch {
+          return { items: [] };
+        }
+      })
       .then((j) => {
-        setChillers(j.items || []);
+        const items = Array.isArray(j.items) ? j.items : [];
+        setChillers(items);
       })
       .finally(() => setLoading(false));
   }, []);

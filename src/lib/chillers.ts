@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
+import {
+  listActiveChillers,
+  upsertChiller,
+  createChiller as createChillerDb,
+  updateChiller as updateChillerDb,
+  deactivateChiller,
+} from "@/lib/db";
 
 export type Chiller = {
   id: string;
@@ -21,10 +27,8 @@ function configPath() {
 }
 
 async function seedChillersFromConfig() {
-  const count = await prisma.chiller.count();
-  if (count > 0) {
-    return;
-  }
+  const existing = listActiveChillers();
+  if (existing && existing.length) return;
   let cfg: RawConfig = { chillers: [] };
   try {
     const raw = fs.readFileSync(configPath(), "utf8");
@@ -46,29 +50,13 @@ async function seedChillersFromConfig() {
     active: !!c.active,
   }));
   for (const item of items) {
-    await prisma.chiller.upsert({
-      where: { id: item.id },
-      update: {
-        name: item.name,
-        ip: item.ip,
-        active: item.active,
-      },
-      create: {
-        id: item.id,
-        name: item.name,
-        ip: item.ip,
-        active: item.active,
-      },
-    });
+    upsertChiller(item);
   }
 }
 
 export async function loadChillers(): Promise<Chiller[]> {
   await seedChillersFromConfig();
-  const rows = await prisma.chiller.findMany({
-    where: { active: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const rows = listActiveChillers();
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -82,12 +70,10 @@ export async function addChiller(data: {
   ip: string;
   active: boolean;
 }): Promise<Chiller> {
-  const row = await prisma.chiller.create({
-    data: {
-      name: String(data.name || "بدون نام"),
-      ip: String(data.ip || ""),
-      active: !!data.active,
-    },
+  const row = createChillerDb({
+    name: String(data.name || "بدون نام"),
+    ip: String(data.ip || ""),
+    active: !!data.active,
   });
   return {
     id: row.id,
@@ -101,29 +87,8 @@ export async function updateChiller(
   id: string,
   patch: Partial<Pick<Chiller, "name" | "ip" | "active">>,
 ): Promise<Chiller | null> {
-  const existing = await prisma.chiller.findUnique({
-    where: { id },
-  });
-  if (!existing) {
-    return null;
-  }
-  const updated = await prisma.chiller.update({
-    where: { id },
-    data: {
-      name:
-        patch.name != null
-          ? String(patch.name || "بدون نام")
-          : existing.name,
-      ip:
-        patch.ip != null
-          ? String(patch.ip || "")
-          : existing.ip,
-      active:
-        patch.active != null
-          ? !!patch.active
-          : existing.active,
-    },
-  });
+  const updated = updateChillerDb(id, patch);
+  if (!updated) return null;
   return {
     id: updated.id,
     name: updated.name,
@@ -133,18 +98,8 @@ export async function updateChiller(
 }
 
 export async function deleteChiller(id: string): Promise<Chiller | null> {
-  const existing = await prisma.chiller.findUnique({
-    where: { id },
-  });
-  if (!existing) {
-    return null;
-  }
-  const updated = await prisma.chiller.update({
-    where: { id },
-    data: {
-      active: false,
-    },
-  });
+  const updated = deactivateChiller(id);
+  if (!updated) return null;
   return {
     id: updated.id,
     name: updated.name,

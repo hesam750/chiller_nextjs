@@ -9,7 +9,7 @@ async function requireAdmin() {
 
 export async function PUT(
   req: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -18,7 +18,7 @@ export async function PUT(
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const id = context.params.id;
+  const id = (await context.params).id;
   const patch: {
     name?: string;
     ip?: string;
@@ -36,12 +36,12 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const id = context.params.id;
+  const id = (await context.params).id;
   const removed = await deleteChiller(id);
   if (!removed) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });

@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import {
+  addTimer,
+  findActiveTimer,
+  deactivateTimersForIp,
+  dueTimers,
+  updateTimer,
+} from "@/lib/db";
 
 type TimerItem = {
   id: string;
   chillerName: string;
   chillerIp: string;
   mode: string;
-  targetAt: Date;
+  hours: number;
+  targetAt: string;
+  active: boolean;
 };
 
 const globalForTimers = globalThis as typeof globalThis & {
@@ -15,18 +23,7 @@ const globalForTimers = globalThis as typeof globalThis & {
 
 async function runDueTimersOnce() {
   const now = new Date();
-  const due = await prisma.timer.findMany({
-    where: {
-      active: true,
-      targetAt: {
-        lte: now,
-      },
-    },
-    orderBy: {
-      targetAt: "asc",
-    },
-    take: 10,
-  });
+  const due = dueTimers(now);
   if (!due.length) {
     return;
   }
@@ -47,13 +44,7 @@ async function runDueTimersOnce() {
       }).catch(() => undefined);
     } catch {
     } finally {
-      try {
-        await prisma.timer.update({
-          where: { id: item.id },
-          data: { active: false },
-        });
-      } catch {
-      }
+      updateTimer(item.id, { active: false });
     }
   }
 }
@@ -75,13 +66,7 @@ export async function GET(req: NextRequest) {
   if (!chillerIp) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const timer = await prisma.timer.findFirst({
-    where: {
-      chillerIp,
-      active: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const timer = findActiveTimer(chillerIp);
   if (!timer) {
     return NextResponse.json({ item: null });
   }
@@ -92,7 +77,7 @@ export async function GET(req: NextRequest) {
       chillerIp: timer.chillerIp,
       mode: timer.mode,
       hours: timer.hours,
-      targetAt: timer.targetAt.toISOString(),
+      targetAt: timer.targetAt,
       active: timer.active,
     },
   });
@@ -105,15 +90,7 @@ export async function DELETE(req: NextRequest) {
   if (!chillerIp) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  await prisma.timer.updateMany({
-    where: {
-      chillerIp,
-      active: true,
-    },
-    data: {
-      active: false,
-    },
-  });
+  deactivateTimersForIp(chillerIp);
   return NextResponse.json({ ok: true });
 }
 
@@ -140,15 +117,12 @@ export async function POST(req: NextRequest) {
   if (Number.isNaN(target.getTime())) {
     return NextResponse.json({ error: "invalid_target" }, { status: 400 });
   }
-  const timer = await prisma.timer.create({
-    data: {
-      chillerName: body.chillerName,
-      chillerIp: body.chillerIp,
-      mode: body.mode,
-      hours,
-      targetAt: target,
-      active: true,
-    },
+  const timer = addTimer({
+    chillerName: body.chillerName,
+    chillerIp: body.chillerIp,
+    mode: body.mode,
+    hours,
+    targetAt: target,
   });
   return NextResponse.json({
     ok: true,
@@ -158,7 +132,7 @@ export async function POST(req: NextRequest) {
       chillerIp: timer.chillerIp,
       mode: timer.mode,
       hours: timer.hours,
-      targetAt: timer.targetAt.toISOString(),
+      targetAt: timer.targetAt,
       active: timer.active,
     },
   });

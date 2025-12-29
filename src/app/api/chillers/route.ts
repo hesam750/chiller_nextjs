@@ -8,8 +8,12 @@ async function requireAdmin() {
 }
 
 export async function GET() {
-  const items = await loadChillers();
-  return NextResponse.json({ items });
+  try {
+    const items = await loadChillers();
+    return NextResponse.json({ items });
+  } catch {
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -25,10 +29,14 @@ export async function POST(req: NextRequest) {
   ) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const item = await addChiller({
-    name: body.name,
-    ip: body.ip,
-    active: body.active,
-  });
-  return NextResponse.json({ ok: true, item });
+  try {
+    const item = await addChiller({
+      name: body.name,
+      ip: body.ip,
+      active: body.active,
+    });
+    return NextResponse.json({ ok: true, item });
+  } catch {
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
 }
