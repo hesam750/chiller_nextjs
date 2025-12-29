@@ -1,0 +1,123 @@
+{
+  "powerLogs": [
+    {
+      "id": "74d2507373c991e5",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T13:44:37.301Z"
+    },
+    {
+      "id": "f58e208fe0048c98",
+      "unitName": "smt",
+      "action": "on",
+      "at": "2025-12-25T11:28:44.737Z"
+    },
+    {
+      "id": "533e343950113114",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T11:28:40.428Z"
+    },
+    {
+      "id": "ac89a6f94794c05b",
+      "unitName": "انبار پوز",
+      "action": "off",
+      "at": "2025-12-25T11:09:28.774Z"
+    },
+    {
+      "id": "2f67459aa825f7fa",
+      "unitName": "انبار پوز",
+      "action": "on",
+      "at": "2025-12-25T11:09:27.785Z"
+    },
+    {
+      "id": "5aa704bca658c5ed",
+      "unitName": "رول کاغذ",
+      "action": "off",
+      "at": "2025-12-25T10:59:53.382Z"
+    },
+    {
+      "id": "9b1b99979656249a",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:59:38.946Z"
+    },
+    {
+      "id": "d046765b0ed67f10",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:51:41.408Z"
+    },
+    {
+      "id": "0fd84c5fa2efd8ad",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:50:58.097Z"
+    },
+    {
+      "id": "ce8224c5889b6e86",
+      "unitName": "رول کاغذ",
+      "action": "off",
+      "at": "2025-12-25T10:41:19.670Z"
+    },
+    {
+      "id": "15540fc6d9018e07",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:41:15.910Z"
+    },
+    {
+      "id": "fb441e1911ee9788",
+      "unitName": "رول کاغذ",
+      "action": "off",
+      "at": "2025-12-25T10:37:31.043Z"
+    },
+    {
+      "id": "06d88472be141724",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:37:25.957Z"
+    },
+    {
+      "id": "c26534700b92964f",
+      "unitName": "رول کاغذ",
+      "action": "off",
+      "at": "2025-12-25T10:27:55.135Z"
+    },
+    {
+      "id": "604506464eac156d",
+      "unitName": "رول کاغذ",
+      "action": "on",
+      "at": "2025-12-25T10:26:29.951Z"
+    },
+    {
+      "id": "9f6654baa092b383",
+      "unitName": "سالن رول",
+      "action": "off",
+      "at": "2025-12-25T09:40:13.462Z"
+    },
+    {
+      "id": "615f77bc03c73641",
+      "unitName": "سالن رول",
+      "action": "on",
+      "at": "2025-12-25T09:40:00.567Z"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "passwordHash": "53ba932c803a407188838f67779f6fd14e1cf0508cf558e2f4648f8917727e45",
+      "role": "admin"
+    },
+    {
+      "username": "manager",
+      "passwordHash": "0b83216a2d99ffed748a3746e82ae8ef84ff8896b0d913ba7bfa02b143973f76",
+      "role": "manager"
+    },
+    {
+      "username": "viewer",
+      "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
+      "role": "viewer"
+    }
+  ]
+}

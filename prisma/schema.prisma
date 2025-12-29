@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Chiller {
+  id        String   @id @default(cuid())
+  name      String
+  ip        String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PowerAction {
+  on
+  off
+}
+
+model PowerLog {
+  id        String      @id @default(cuid())
+  unitName  String
+  action    PowerAction
+  at        DateTime
+  user      String?
+  createdAt DateTime    @default(now())
+}
+
+model Timer {
+  id          String   @id @default(cuid())
+  chillerName String
+  chillerIp   String
+  mode        String
+  hours       Float
+  targetAt    DateTime
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
