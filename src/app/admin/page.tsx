@@ -43,21 +43,12 @@ export default function AdminPage() {
   const [pdgName, setPdgName] = useState("");
   const [pdgIp, setPdgIp] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") {
-      return "dark";
-    }
-    try {
-      const stored = window.localStorage.getItem("dashboard-theme");
-      if (stored === "dark" || stored === "light") {
-        return stored;
-      }
-      if (
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: light)").matches
-      ) {
-        return "light";
-      }
-    } catch {
+    if (typeof window === "undefined") return "dark";
+    if (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: light)").matches
+    ) {
+      return "light";
     }
     return "dark";
   });
@@ -66,12 +57,6 @@ export default function AdminPage() {
     const value = theme === "dark" ? "dark" : "light";
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-theme", value);
-    }
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.setItem("dashboard-theme", value);
-      } catch {
-      }
     }
   }, [theme]);
 

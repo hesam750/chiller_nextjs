@@ -17,7 +17,16 @@ export function DashboardPage() {
   const [role, setRole] = useState<"admin" | "manager" | "viewer" | "guest">(
     "guest",
   );
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    if (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: light)").matches
+    ) {
+      return "light";
+    }
+    return "dark";
+  });
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [connection, setConnection] = useState<"unknown" | "online" | "offline">(
@@ -25,25 +34,7 @@ export function DashboardPage() {
   );
   const [introOpen, setIntroOpen] = useState(true);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    Promise.resolve().then(() => {
-      try {
-        const stored = window.localStorage.getItem("dashboard-theme");
-        if (stored === "dark" || stored === "light") {
-          setTheme(stored);
-        } else if (
-          window.matchMedia &&
-          window.matchMedia("(prefers-color-scheme: light)").matches
-        ) {
-          setTheme("light");
-        }
-      } catch {
-      }
-    });
-  }, []);
+  
 
   useEffect(() => {
     let cancelled = false;
@@ -265,12 +256,6 @@ export function DashboardPage() {
   useEffect(() => {
     const value = theme === "dark" ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", value);
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.setItem("dashboard-theme", value);
-      } catch {
-      }
-    }
   }, [theme]);
 
   const handleLogout = () => {
