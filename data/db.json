@@ -1,22 +1,218 @@
 {
-  "powerLogs": [],
+  "powerLogs": [
+    {
+      "id": "71b07fc078461c3f",
+      "unitName": "tst",
+      "action": "off",
+      "at": "2026-02-05T13:19:20.485Z",
+      "user": "تست"
+    },
+    {
+      "id": "eab71803a100b674",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T13:18:56.016Z",
+      "user": "تست"
+    },
+    {
+      "id": "811253c44aa24bf5",
+      "unitName": "tst",
+      "action": "off",
+      "at": "2026-02-05T13:18:09.823Z",
+      "user": "تست"
+    },
+    {
+      "id": "8bd59c44bd12c902",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T13:17:17.120Z",
+      "user": "تست"
+    },
+    {
+      "id": "fd33b44bddb43940",
+      "unitName": "tst",
+      "action": "off",
+      "at": "2026-02-05T13:11:37.045Z",
+      "user": "تست"
+    },
+    {
+      "id": "77f02cb1aa38713b",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T13:10:32.547Z",
+      "user": "تست"
+    },
+    {
+      "id": "f514bcba4804c44a",
+      "unitName": "tst",
+      "action": "off",
+      "at": "2026-02-05T13:02:55.852Z",
+      "user": "تست"
+    },
+    {
+      "id": "e3794bcbb22b9bc0",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T13:02:45.860Z",
+      "user": "تست"
+    },
+    {
+      "id": "fe69eb148502c915",
+      "unitName": "tst",
+      "action": "off",
+      "at": "2026-02-05T13:01:36.869Z",
+      "user": "تست"
+    },
+    {
+      "id": "e0b28ec6999bf2c0",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T13:01:24.213Z",
+      "user": "تست"
+    },
+    {
+      "id": "8ee8af4bda717fe6",
+      "unitName": "tst",
+      "action": "on",
+      "at": "2026-02-05T12:57:21.151Z",
+      "user": "تست"
+    }
+  ],
   "users": [
     {
       "username": "admin",
       "passwordHash": "53ba932c803a407188838f67779f6fd14e1cf0508cf558e2f4648f8917727e45",
-      "role": "admin"
+      "role": "admin",
+      "active": true,
+      "permissions": {
+        "canViewTimer": true,
+        "canControlTimer": true,
+        "canTogglePower": true,
+        "canSetTemperature": true,
+        "canAddPackage": true,
+        "canManageUsers": false,
+        "canViewLogs": true
+      }
     },
     {
       "username": "manager",
       "passwordHash": "0b83216a2d99ffed748a3746e82ae8ef84ff8896b0d913ba7bfa02b143973f76",
-      "role": "manager"
+      "role": "manager",
+      "active": true,
+      "permissions": {
+        "canViewTimer": true,
+        "canControlTimer": true,
+        "canTogglePower": true,
+        "canSetTemperature": true,
+        "canAddPackage": false,
+        "canManageUsers": true,
+        "canViewLogs": true
+      }
     },
     {
       "username": "viewer",
       "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
-      "role": "viewer"
+      "role": "viewer",
+      "active": true,
+      "permissions": {
+        "canViewTimer": true,
+        "canControlTimer": true,
+        "canTogglePower": true,
+        "canSetTemperature": true,
+        "canAddPackage": false,
+        "canManageUsers": true,
+        "canViewLogs": true
+      }
+    },
+    {
+      "username": "حمیدرضا سعدی",
+      "passwordHash": "0b83216a2d99ffed748a3746e82ae8ef84ff8896b0d913ba7bfa02b143973f76",
+      "role": "manager",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "حسین کارجو",
+      "passwordHash": "53ba932c803a407188838f67779f6fd14e1cf0508cf558e2f4648f8917727e45",
+      "role": "admin",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "ابراهیم رضایی",
+      "passwordHash": "53ba932c803a407188838f67779f6fd14e1cf0508cf558e2f4648f8917727e45",
+      "role": "admin",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "محمد بیننده",
+      "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
+      "role": "viewer",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "سید طاهر محمدی",
+      "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
+      "role": "viewer",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "محمدعلی رضایی",
+      "passwordHash": "5fcf2e3464f8e2d8aff919f962c4e64997684aaf5935fe46b48341f2f810c40a",
+      "role": "viewer",
+      "active": true,
+      "permissions": {}
+    },
+    {
+      "username": "تست",
+      "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "role": "admin",
+      "active": true,
+      "permissions": {
+        "canViewTimer": true,
+        "canControlTimer": true,
+        "canTogglePower": true,
+        "canSetTemperature": true,
+        "canAddPackage": true,
+        "canManageUsers": true,
+        "canViewLogs": true
+      }
     }
   ],
-  "chillers": [],
-  "timers": []
+  "chillers": [
+    {
+      "id": "87078f1ba9fc839e",
+      "name": "تست",
+      "ip": "10.61.44.52",
+      "active": true,
+      "createdAt": "2026-02-05T12:46:53.304Z",
+      "updatedAt": "2026-02-05T12:46:53.304Z"
+    },
+    {
+      "id": "15e8e09c580260ee",
+      "name": "tst",
+      "ip": "10.61.44.53",
+      "active": true,
+      "createdAt": "2026-02-05T12:52:47.363Z",
+      "updatedAt": "2026-02-05T12:52:47.363Z"
+    }
+  ],
+  "timers": [],
+  "settings": {
+    "progressOnSeconds": 60,
+    "progressOffSeconds": 60,
+    "byChiller": {
+      "87078f1ba9fc839e": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "15e8e09c580260ee": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    }
+  }
 }

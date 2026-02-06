@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteChiller, updateChiller } from "@/lib/chillers";
 import { getSessionFromCookies } from "@/lib/auth";
+import { getUser } from "@/lib/db";
 
-async function requireAdmin() {
+async function requireAddPackage() {
   const s = await getSessionFromCookies();
-  return s && s.role === "admin";
+  if (!s || !s.username) return false;
+  const u = getUser(s.username);
+  if (!u) return false;
+  if (s.role === "admin" || s.role === "manager") return true;
+  return !!(u.permissions && u.permissions.canAddPackage);
 }
 
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAddPackage())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -38,7 +43,7 @@ export async function DELETE(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAddPackage())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const id = (await context.params).id;

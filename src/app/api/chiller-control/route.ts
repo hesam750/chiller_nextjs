@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getSessionFromCookies } from "@/lib/auth";
+import { getUser } from "@/lib/db";
 
 type VarsConfig = {
   PowerCmd?: string;
@@ -632,9 +633,7 @@ export async function POST(req: NextRequest) {
   }
 
   const session = await getSessionFromCookies();
-  if (!session || (session.role !== "admin" && session.role !== "manager")) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
-  }
+  const user = session?.username ? getUser(session.username) : null;
 
   const ip = typeof body.ip === "string" ? body.ip.trim() : "";
   const kind = typeof body.kind === "string" ? body.kind : "";
@@ -646,6 +645,9 @@ export async function POST(req: NextRequest) {
   const varsCfg = loadVarsConfig();
 
   if (kind === "power") {
+    if (!user || !(user.permissions?.canTogglePower)) {
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    }
     const target = !!body.target;
     const powerVar = varsCfg.PowerCmd || "SystemStatus.Ctrl";
     const modeVar = varsCfg.ModeCmd || "SetTyp";
@@ -677,6 +679,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (kind === "mode") {
+    if (!user || !(user.permissions?.canTogglePower)) {
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    }
     const m = typeof body.mode === "string" ? body.mode.toLowerCase() : "";
     let code = 0;
     if (m === "precomfort" || m === "pre") code = 1;
@@ -691,6 +696,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (kind === "setpoint") {
+    if (!user || !(user.permissions?.canSetTemperature)) {
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    }
     const valueRaw =
       typeof body.value === "number"
         ? body.value

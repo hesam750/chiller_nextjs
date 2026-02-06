@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth";
-import { appendPowerLog, getPowerLogs } from "@/lib/db";
+import { appendPowerLog, getPowerLogs, getUser } from "@/lib/db";
 import crypto from "crypto";
 
 export async function GET() {
   const session = await getSessionFromCookies();
-  if (!session || (session.role !== "admin" && session.role !== "manager")) {
+  if (!session) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const u = session.username ? getUser(session.username) : undefined;
+  const allowed = !!(u && u.permissions && u.permissions.canViewLogs);
+  if (!allowed) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const logs = getPowerLogs(100);
@@ -22,7 +27,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getSessionFromCookies();
-  if (!session || (session.role !== "admin" && session.role !== "manager")) {
+  if (!session) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const u = session.username ? getUser(session.username) : undefined;
+  const allowed = !!(u && u.permissions && u.permissions.canViewLogs);
+  if (!allowed) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -30,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
   const action = body.action === "on" ? "on" : "off";
-  const user = typeof body.user === "string" ? body.user : undefined;
+  const user = typeof session.username === "string" ? session.username : undefined;
   appendPowerLog({
     id: crypto.randomBytes(8).toString("hex"),
     unitName: body.unitName,

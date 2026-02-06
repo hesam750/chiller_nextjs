@@ -9,6 +9,8 @@ type Props = {
   active: boolean;
   mode?: "dark" | "light";
   canControl?: boolean;
+  progressOnSeconds?: number;
+  progressOffSeconds?: number;
   onTogglePower: (payload: { name: string; ip: string; next: boolean }) => Promise<{ ok: boolean }>;
   onApplySetpoint?: (payload: {
     name: string;
@@ -69,12 +71,22 @@ const jalaliMonthNames = [
   "اسفند",
 ];
 
+function formatForwardUnits(totalSeconds: number) {
+  const s = totalSeconds % 60;
+  const m = Math.floor(totalSeconds / 60) % 60;
+  const h = Math.floor(totalSeconds / 3600) % 24;
+  const d = Math.floor(totalSeconds / 86400);
+  return `${toPersianNumber(s)} ثانیه ${toPersianNumber(m)} دقیقه ${toPersianNumber(h)} ساعت ${toPersianNumber(d)} روز`;
+}
+
 export function ChillerCard({
   name,
   ip,
   active,
   mode = "dark",
   canControl = true,
+  progressOnSeconds = 60,
+  progressOffSeconds = 60,
   onTogglePower,
   onApplySetpoint,
 }: Props) {
@@ -120,6 +132,9 @@ export function ChillerCard({
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [timerOpen, setTimerOpen] = useState(false);
   const [applyHighlight, setApplyHighlight] = useState(false);
+  const [uptimeState, setUptimeState] = useState<"on" | "off" | "unknown">("unknown");
+  const [uptimeSeconds, setUptimeSeconds] = useState<number | null>(null);
+  const [uptimeLastFetchedAt, setUptimeLastFetchedAt] = useState<number>(0);
 
   const handleToggle = useCallback(
     async (target?: boolean) => {
@@ -155,12 +170,7 @@ export function ChillerCard({
 
   const remainingMs = timerTarget ? Math.max(0, timerTarget - timerNow) : 0;
   const remainingTotalSeconds = Math.floor(remainingMs / 1000);
-  const remainingH = Math.floor(remainingTotalSeconds / 3600);
-  const remainingM = Math.floor((remainingTotalSeconds % 3600) / 60);
-  const remainingS = remainingTotalSeconds % 60;
-  const remainingHms = [remainingH, remainingM, remainingS]
-    .map((v) => String(v).padStart(2, "0"))
-    .join(":");
+  const remainingForward = formatForwardUnits(remainingTotalSeconds);
 
   const spMin = 10;
   const spMax = 30;
@@ -338,7 +348,10 @@ export function ChillerCard({
     let cancelled = false;
     const startedAt = Date.now();
     setStartingSeconds(0);
-    const maxSeconds = startingMode === "off" ? 30 : 60;
+    const maxSeconds =
+      startingMode === "off"
+        ? Math.max(1, Math.round(progressOffSeconds || 60))
+        : Math.max(1, Math.round(progressOnSeconds || 60));
     const id = setInterval(() => {
       if (cancelled) return;
       const elapsed = Math.min(maxSeconds, Math.floor((Date.now() - startedAt) / 1000));
@@ -352,7 +365,7 @@ export function ChillerCard({
       cancelled = true;
       clearInterval(id);
     };
-  }, [starting, startingMode]);
+  }, [starting, startingMode, progressOnSeconds, progressOffSeconds]);
 
   useEffect(() => {
     if (starting) return;
@@ -511,36 +524,104 @@ export function ChillerCard({
   const canSubmitTimer =
     !!timerMode && !!timerJDate && !busy && canControl && active;
 
+  function formatUptime(seconds: number | null) {
+    if (seconds == null || seconds < 0) return "-";
+    const total = Math.floor(seconds);
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+    const hh = String(hours).padStart(2, "0");
+    const mm = String(minutes).padStart(2, "0");
+    const ss = String(secs).padStart(2, "0");
+    const prefix = days > 0 ? `${toPersianNumber(days)} روز ` : "";
+    const clock = `${toPersianNumber(hh)}:${toPersianNumber(mm)}:${toPersianNumber(ss)}`;
+    return prefix + clock;
+  }
+
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const fetchUptime = async () => {
+      try {
+        const res = await fetch("/api/power-uptime?unitName=" + encodeURIComponent(name));
+        if (!res.ok) return;
+        const j = (await res.json().catch(() => null)) as
+          | {
+              state?: "on" | "off" | "unknown";
+              sinceOnSeconds?: number | null;
+              sinceOffSeconds?: number | null;
+            }
+          | null;
+        if (!j || cancelled) return;
+        const st = j.state === "on" || j.state === "off" ? j.state : "unknown";
+        setUptimeState(st);
+        const secs = st === "on" ? j.sinceOnSeconds : st === "off" ? j.sinceOffSeconds : null;
+        setUptimeSeconds(typeof secs === "number" ? secs : null);
+        setUptimeLastFetchedAt(Date.now());
+      } catch {
+      }
+    };
+    fetchUptime();
+    intervalId = setInterval(fetchUptime, 5000);
+    const tickId = setInterval(() => {
+      if (cancelled) return;
+      if (uptimeSeconds != null) {
+        const sinceFetch = Math.floor((Date.now() - uptimeLastFetchedAt) / 1000);
+        setUptimeSeconds((prev) => (prev != null ? prev + 1 : null));
+        if (sinceFetch > 30) {
+          fetchUptime().catch(() => undefined);
+        }
+      }
+    }, 1000);
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+      clearInterval(tickId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, active]);
+
   return (
     <div
-      className={`flex flex-col rounded-[20px] overflow-hidden ${
-        isDark
-          ? "border border-[#1b2335] bg-[#07101f] text-slate-50 shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
-          : "border border-zinc-200 bg-white text-zinc-900 shadow-[0_14px_40px_rgba(15,23,42,0.12)]"
-      } ${!active ? "opacity-50" : ""}`}
+      className={`relative flex flex-col rounded-[20px] ${!active ? "opacity-50" : ""}`}
+      style={{
+        transformStyle: "preserve-3d",
+        transition: "transform 800ms cubic-bezier(0.19,1,0.22,1)",
+        transform: starting
+          ? "perspective(1000px) rotateY(180deg)"
+          : "perspective(1000px) rotateY(0deg)",
+      }}
     >
+      <div
+        className={`relative flex flex-col w-full h-full rounded-[20px] overflow-hidden ${
+          isDark
+            ? "border border-[#1b2335] bg-[#07101f] text-slate-50 shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
+            : "border border-zinc-200 bg-white text-zinc-900 shadow-[0_14px_40px_rgba(15,23,42,0.12)]"
+        }`}
+        style={{ backfaceVisibility: "hidden" }}
+      >
       <div className="px-5 pt-4">
         <div className="flex items-baseline justify-between gap-2">
           <div className="flex flex-col gap-1">
-            <div
-              className={`text-[11px] ${
-                isDark ? "text-slate-400" : "text-zinc-500"
-              }`}
-            >
-              واحد
-            </div>
             <div className="text-sm font-semibold">{name}</div>
           </div>
           <span
-            className={`text-[11px] ltr ${
-              isDark ? "text-slate-500" : "text-zinc-500"
+            className={`text-[11px] ${
+              isDark ? "text-slate-300" : "text-zinc-700"
             }`}
           >
-            {ip || "IP تنظیم نشده"}
+            {uptimeState === "on"
+              ? `روشن: ${formatUptime(uptimeSeconds)}`
+              : uptimeState === "off"
+                ? `خاموش: ${formatUptime(uptimeSeconds)}`
+                : "-"}
           </span>
         </div>
-      </div>
 
+      </div>
+ 
       <div className="flex items-center justify-center pt-4 pb-3 px-5">
         <div
           className={`relative w-[150px] h-[150px] rounded-full flex items-center justify-center shadow-[0_18px_40px_rgba(0,0,0,0.75)] border-2 transition-colors duration-300 ${
@@ -624,7 +705,7 @@ export function ChillerCard({
               } ${timerTarget && timerMode ? "font-mono ltr" : "font-medium"}`}
             >
               {timerTarget && timerMode
-                ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingHms}`
+                ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingForward}`
                 : "بدون تایمر فعال"}
             </span>
           </div>
@@ -645,50 +726,22 @@ export function ChillerCard({
 
       <div className="px-5 pb-4">
         <div
-          className={`rounded-2xl px-4 py-3 flex flex-col items-center justify-center gap-2 border ${
+          className={`relative rounded-2xl border ${
             isDark ? "border-[#1b2335] bg-[#050c18]" : "border-zinc-200 bg-zinc-50"
           }`}
         >
-          {starting ? (
-            <div className="flex flex-col items-center gap-2 text-[11px]">
-              <div className="flex items-center gap-2">
-                <div className="relative h-1.5 w-32 rounded-full bg-slate-800/60 overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-200 transition-all"
-                    style={{
-                      width: `${
-                        Math.min(
-                          100,
-                          (startingSeconds / (startingMode === "off" ? 30 : 60)) * 100,
-                        )
-                      }%`,
-                    }}
-                  />
-                </div>
-                <span
-                  className={`font-mono ${
-                    isDark ? "text-slate-200" : "text-zinc-800"
-                  }`}
-                >
-                  {startingSeconds}s / {startingMode === "off" ? "30s" : "60s"}
-                </span>
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-tight ${
-                  startingMode === "off"
-                    ? isDark
-                      ? "bg-red-600/15 text-red-400 border border-red-500/40 shadow-[0_0_18px_rgba(248,113,113,0.45)]"
-                      : "bg-red-50 text-red-600 border border-red-400/60 shadow-[0_0_14px_rgba(248,113,113,0.45)]"
-                    : isDark
-                      ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/40 shadow-[0_0_18px_rgba(16,185,129,0.6)]"
-                      : "bg-emerald-50 text-emerald-700 border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.7)]"
-                }`}
-              >
-                {startingMode === "off" ? "در حال خاموش شدن..." : "در حال روشن شدن..."}
-              </span>
-            </div>
-          ) : (
-            <>
+          <div
+            className={`relative w-full h-[90px]`}
+            style={{
+              transformStyle: "preserve-3d",
+              transition: "transform 800ms cubic-bezier(0.19,1,0.22,1)",
+              transform: starting ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 py-3"
+              style={{ backfaceVisibility: "hidden" }}
+            >
               <div
                 className={`inline-flex items-center rounded-full p-1 text-[11px] border ${
                   isDark ? "border-slate-700 bg-slate-900" : "border-zinc-300 bg-white"
@@ -698,14 +751,14 @@ export function ChillerCard({
                   type="button"
                   onClick={() => handleToggle(true)}
                   disabled={!active || busy || !canControl}
-                  className={`px-3 py-1 rounded-full transition ${
+                  className={`px-4 py-1.5 rounded-full transition font-medium ${
                     powerOn
                       ? isDark
                         ? "bg-emerald-500 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.6)]"
                         : "bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.6)]"
                       : isDark
-                        ? "text-slate-300"
-                        : "text-zinc-600"
+                        ? "text-slate-400 hover:text-slate-200"
+                        : "text-zinc-500 hover:text-zinc-700"
                   } ${
                     !active || busy || !canControl
                       ? "opacity-60 cursor-not-allowed"
@@ -718,12 +771,12 @@ export function ChillerCard({
                   type="button"
                   onClick={() => handleToggle(false)}
                   disabled={!active || busy || !canControl}
-                  className={`px-3 py-1 rounded-full transition ${
+                  className={`px-4 py-1.5 rounded-full transition font-medium ${
                     !powerOn
                       ? "bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.6)]"
                       : isDark
-                        ? "text-slate-300"
-                        : "text-zinc-600"
+                        ? "text-slate-400 hover:text-slate-200"
+                        : "text-zinc-500 hover:text-zinc-700"
                   } ${
                     !active || busy || !canControl
                       ? "opacity-60 cursor-not-allowed"
@@ -734,7 +787,7 @@ export function ChillerCard({
                 </button>
               </div>
               <span
-                className={`text-[11px] ${
+                className={`text-[11px] font-medium ${
                   powerOn
                     ? isDark
                       ? "text-emerald-300"
@@ -746,8 +799,52 @@ export function ChillerCard({
               >
                 وضعیت: {powerOn ? "روشن" : "خاموش"}
               </span>
-            </>
-          )}
+            </div>
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-3"
+              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative h-8 w-8">
+                  <div
+                    className={`h-8 w-8 rounded-full border-[3px] ${
+                      startingMode === "off"
+                        ? "border-red-500/40"
+                        : "border-emerald-500/40"
+                    } border-t-transparent animate-spin`}
+                  />
+                </div>
+                <div
+                  className={`text-xl font-bold tracking-widest font-mono ${
+                    isDark ? "text-slate-100" : "text-zinc-800"
+                  }`}
+                >
+                  {toPersianNumber(
+                    Math.max(
+                      0,
+                      (startingMode === "off"
+                        ? Math.max(1, Math.round(progressOffSeconds || 60))
+                        : Math.max(1, Math.round(progressOnSeconds || 60))) - startingSeconds,
+                    ),
+                  )}{" "}
+                  <span className="text-xs font-sans font-normal opacity-70">ثانیه</span>
+                </div>
+              </div>
+              <span
+                className={`mt-1 px-3 py-0.5 rounded-full text-[10px] font-bold tracking-tight ${
+                  startingMode === "off"
+                    ? isDark
+                      ? "bg-red-600/15 text-red-400 border border-red-500/40"
+                      : "bg-red-50 text-red-600 border border-red-400/60"
+                    : isDark
+                      ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/40"
+                      : "bg-emerald-50 text-emerald-700 border border-emerald-400/70"
+                }`}
+              >
+                {startingMode === "off" ? "در حال خاموش شدن..." : "در حال روشن شدن..."}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -762,9 +859,9 @@ export function ChillerCard({
           >
             <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-base font-semibold">تنظیم تایمر چیلر</span>
+              <span className="text-base font-semibold">تنظیم تایمر پکیج</span>
               <span className="text-xs text-slate-400">
-                  تعیین کن چه زمانی چیلر به‌صورت خودکار روشن یا خاموش شود
+                  تعیین کن چه زمانی پکیج به‌صورت خودکار روشن یا خاموش شود
                 </span>
               </div>
               <button
@@ -798,7 +895,7 @@ export function ChillerCard({
                   }`}
                 >
                   {timerTarget && timerMode
-                    ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingHms}`
+                    ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingForward}`
                     : "بدون زمان‌بندی فعال"}
                 </span>
               </div>
@@ -1082,7 +1179,7 @@ export function ChillerCard({
                 }`}
               >
                 {timerMode
-                  ? `چیلر ${
+                  ? `پکیج ${
                       timerMode === "on" ? "به‌صورت خودکار روشن" : "به‌صورت خودکار خاموش"
                     } می‌شود.`
                   : "نوع عمل (روشن یا خاموش شدن) را انتخاب کنید."}
@@ -1252,6 +1349,57 @@ export function ChillerCard({
             <span className="mr-1">°C</span>
           </span>
         </div>
+      </div>
+      </div>
+
+      <div
+        className={`absolute inset-0 rounded-[20px] flex flex-col items-center justify-center gap-4 px-6 overflow-hidden ${
+          isDark
+            ? "bg-[#050c18] text-slate-50 border border-[#1b2335] shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
+            : "bg-white text-zinc-900 border border-zinc-200 shadow-[0_14px_40px_rgba(15,23,42,0.12)]"
+        }`}
+        style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+      >
+        <div className="relative h-14 w-14">
+          <div
+            className={`h-14 w-14 rounded-full border-4 ${
+              startingMode === "off" ? "border-red-500/40" : "border-emerald-500/40"
+            } border-t-transparent animate-spin`}
+          />
+          <div
+            className={`absolute inset-1 rounded-full ${
+              startingMode === "off" ? "bg-red-500/10" : "bg-emerald-500/10"
+            }`}
+          />
+        </div>
+        <div
+          className={`text-2xl font-bold tracking-widest font-mono ${
+            isDark ? "text-slate-100" : "text-zinc-800"
+          }`}
+        >
+          {toPersianNumber(
+            Math.max(
+              0,
+              (startingMode === "off"
+                ? Math.max(1, Math.round(progressOffSeconds || 60))
+                : Math.max(1, Math.round(progressOnSeconds || 60))) - startingSeconds,
+            ),
+          )}{" "}
+          ثانیه
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-tight ${
+            startingMode === "off"
+              ? isDark
+                ? "bg-red-600/15 text-red-400 border border-red-500/40 shadow-[0_0_18px_rgba(248,113,113,0.45)]"
+                : "bg-red-50 text-red-600 border border-red-400/60 shadow-[0_0_14px_rgba(248,113,113,0.45)]"
+              : isDark
+                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/40 shadow-[0_0_18px_rgba(16,185,129,0.6)]"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.7)]"
+          }`}
+        >
+          {startingMode === "off" ? "در حال خاموش شدن..." : "در حال روشن شدن..."}
+        </span>
       </div>
     </div>
   );

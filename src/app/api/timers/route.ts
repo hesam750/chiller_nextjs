@@ -6,6 +6,9 @@ import {
   dueTimers,
   updateTimer,
 } from "@/lib/db";
+import { createSession } from "@/lib/auth";
+import { getSessionFromCookies } from "@/lib/auth";
+import { getUser } from "@/lib/db";
 
 type TimerItem = {
   id: string;
@@ -19,6 +22,7 @@ type TimerItem = {
 
 const globalForTimers = globalThis as typeof globalThis & {
   timersWorkerStarted?: boolean;
+  timersBaseUrl?: string;
 };
 
 async function runDueTimersOnce() {
@@ -27,14 +31,19 @@ async function runDueTimersOnce() {
   if (!due.length) {
     return;
   }
-  const baseUrl = process.env.TIMER_BASE_URL || "http://127.0.0.1:3000";
+  const baseUrl =
+    globalForTimers.timersBaseUrl ||
+    process.env.TIMER_BASE_URL ||
+    "http://127.0.0.1:3000";
+  const token = createSession("timer-bot", "manager");
   for (const item of due as TimerItem[]) {
     try {
       const target = item.mode === "on";
-      await fetch(baseUrl + "/api/chiller-control", {
+      const res = await fetch(baseUrl + "/api/chiller-control", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Cookie: `session=${token}`,
         },
         body: JSON.stringify({
           ip: item.chillerIp,
@@ -42,9 +51,10 @@ async function runDueTimersOnce() {
           target,
         }),
       }).catch(() => undefined);
+      if (res && res.ok) {
+        updateTimer(item.id, { active: false });
+      }
     } catch {
-    } finally {
-      updateTimer(item.id, { active: false });
     }
   }
 }
@@ -61,6 +71,19 @@ function ensureTimersWorker() {
 
 export async function GET(req: NextRequest) {
   ensureTimersWorker();
+  try {
+    const u = new URL(req.url);
+    globalForTimers.timersBaseUrl = u.origin;
+  } catch {
+  }
+  const session = await getSessionFromCookies();
+  const allowed =
+    session && session.username
+      ? !!(getUser(session.username)?.permissions?.canViewTimer)
+      : false;
+  if (!allowed) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   const { searchParams } = new URL(req.url);
   const chillerIp = searchParams.get("chillerIp") || searchParams.get("ip");
   if (!chillerIp) {
@@ -85,6 +108,19 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   ensureTimersWorker();
+  try {
+    const u = new URL(req.url);
+    globalForTimers.timersBaseUrl = u.origin;
+  } catch {
+  }
+  const session = await getSessionFromCookies();
+  const allowed =
+    session && session.username
+      ? !!(getUser(session.username)?.permissions?.canControlTimer)
+      : false;
+  if (!allowed) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   const { searchParams } = new URL(req.url);
   const chillerIp = searchParams.get("chillerIp") || searchParams.get("ip");
   if (!chillerIp) {
@@ -96,6 +132,19 @@ export async function DELETE(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   ensureTimersWorker();
+  try {
+    const u = new URL(req.url);
+    globalForTimers.timersBaseUrl = u.origin;
+  } catch {
+  }
+  const session = await getSessionFromCookies();
+  const allowed =
+    session && session.username
+      ? !!(getUser(session.username)?.permissions?.canControlTimer)
+      : false;
+  if (!allowed) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   const body = await req.json().catch(() => null);
   console.log('Timer POST request body:', body);
   if (

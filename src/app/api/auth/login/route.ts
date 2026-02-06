@@ -13,9 +13,12 @@ export async function POST(req: NextRequest) {
   }
   const token = createSession(user.username, user.role);
   const res = NextResponse.json({ ok: true, role: user.role });
+  const secure =
+    process.env.COOKIE_SECURE === "1" ||
+    process.env.COOKIE_SECURE === "true";
   res.cookies.set("session", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60,

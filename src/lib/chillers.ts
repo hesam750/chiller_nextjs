@@ -21,9 +21,39 @@ type RawConfig = {
   [key: string]: unknown;
 };
 
+function projectRootDir() {
+  const cwd = process.cwd();
+  function hasPkg(dir: string) {
+    try {
+      const p = path.join(dir, "package.json");
+      if (!fs.existsSync(p)) return false;
+      const t = fs.readFileSync(p, "utf8");
+      try {
+        const j = JSON.parse(t) as { name?: string };
+        const n = j && j.name ? String(j.name) : "";
+        return !!n;
+      } catch {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+  const candidates = [
+    cwd,
+    path.resolve(cwd, ".."),
+    path.resolve(cwd, "../.."),
+    path.resolve(cwd, "../../.."),
+  ];
+  for (const d of candidates) {
+    if (hasPkg(d)) return d;
+  }
+  return cwd;
+}
+
 function configPath() {
-  const base = process.cwd();
-  return path.join(base, "..", "assets", "data", "dashboard.config.json");
+  const base = projectRootDir();
+  return path.join(base, "assets", "data", "dashboard.config.json");
 }
 
 async function seedChillersFromConfig() {

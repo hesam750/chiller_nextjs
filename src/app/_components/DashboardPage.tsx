@@ -17,6 +17,10 @@ export function DashboardPage() {
   const [role, setRole] = useState<"admin" | "manager" | "viewer" | "guest">(
     "guest",
   );
+  const [username, setUsername] = useState<string>("");
+  const [progressOnSeconds, setProgressOnSeconds] = useState(60);
+  const [progressOffSeconds, setProgressOffSeconds] = useState(60);
+  const [progressByChiller, setProgressByChiller] = useState<Record<string, { progressOnSeconds: number; progressOffSeconds: number }>>({});
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     if (
@@ -33,6 +37,7 @@ export function DashboardPage() {
     "unknown",
   );
   const [introOpen, setIntroOpen] = useState(true);
+  const [mePermissions, setMePermissions] = useState<Record<string, boolean> | null>(null);
 
   
 
@@ -92,6 +97,14 @@ export function DashboardPage() {
             ? r0
             : "guest";
         setRole(rr);
+        const un =
+          j && typeof j.username === "string" ? j.username : "";
+        setUsername(un || "");
+        if (j && j.permissions && typeof j.permissions === "object") {
+          setMePermissions(j.permissions as Record<string, boolean>);
+        } else {
+          setMePermissions(null);
+        }
         if (rr === "guest") {
           window.location.replace("/login");
         }
@@ -117,6 +130,58 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!Array.isArray(chillers) || chillers.length === 0) return;
+    let cancelled = false;
+    const load = async () => {
+      const entries = await Promise.all(
+        chillers.map(async (c) => {
+          try {
+            const r = await fetch("/api/settings?chillerId=" + encodeURIComponent(c.id));
+            if (!r.ok) return [c.id, null] as const;
+            const j = await r.json().catch(() => null);
+            const item = j && j.item ? j.item : null;
+            if (!item || typeof item.progressOnSeconds !== "number" || typeof item.progressOffSeconds !== "number") {
+              return [c.id, null] as const;
+            }
+            return [
+              c.id,
+              {
+                progressOnSeconds: Math.max(1, Math.round(item.progressOnSeconds)),
+                progressOffSeconds: Math.max(1, Math.round(item.progressOffSeconds)),
+              },
+            ] as const;
+          } catch {
+            return [c.id, null] as const;
+          }
+        }),
+      );
+      if (cancelled) return;
+      const next: Record<string, { progressOnSeconds: number; progressOffSeconds: number }> = {};
+      for (const [id, val] of entries) {
+        if (val) next[id] = val;
+      }
+      setProgressByChiller(next);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [chillers]);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((j) => {
+        const item = j && j.item ? j.item : {};
+        const onS = typeof item.progressOnSeconds === "number" ? item.progressOnSeconds : 60;
+        const offS = typeof item.progressOffSeconds === "number" ? item.progressOffSeconds : 60;
+        setProgressOnSeconds(Math.max(1, Math.round(onS)));
+        setProgressOffSeconds(Math.max(1, Math.round(offS)));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     if (!introOpen) return;
     const id = setTimeout(() => {
       setIntroOpen(false);
@@ -133,9 +198,9 @@ export function DashboardPage() {
   };
 
   const handleTogglePower = async (payload: { name: string; ip: string; next: boolean }) => {
-    const canControl = role === "admin" || role === "manager";
+    const canControl = !!(mePermissions && mePermissions.canTogglePower);
     if (!canControl) {
-      showToast("شما دسترسی خاموش و روشن کردن این چیلر را ندارید", "error");
+      showToast("شما دسترسی خاموش و روشن کردن این پکیج را ندارید", "error");
       return { ok: false };
     }
     const action = payload.next ? "on" : "off";
@@ -171,21 +236,21 @@ export function DashboardPage() {
         await fetch("/api/power-log", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ unitName: payload.name, action }),
+          body: JSON.stringify({ unitName: payload.name, action, user: username }),
         });
       } catch {
       }
       if (payload.next) {
-        showToast("چیلر با موفقیت روشن شد", "success");
+        showToast("پکیج با موفقیت روشن شد", "success");
       } else {
-        showToast("چیلر با موفقیت خاموش شد", "success");
+        showToast("پکیج با موفقیت خاموش شد", "success");
       }
     } else if (forbidden) {
       showToast("اجازه اجرای این دستور را ندارید", "error");
     } else if (unreachable) {
-      showToast("ارتباط با چیلر برقرار نشد", "error");
+      showToast("ارتباط با پکیج برقرار نشد", "error");
     } else {
-      showToast("خطا در ارسال دستور به چیلر", "error");
+      showToast("خطا در ارسال دستور به پکیج", "error");
     }
 
     return { ok };
@@ -196,13 +261,13 @@ export function DashboardPage() {
     ip: string;
     value: number;
   }) => {
-    const canControl = role === "admin" || role === "manager";
+    const canControl = !!(mePermissions && mePermissions.canSetTemperature);
     if (!canControl) {
-      showToast("شما دسترسی تنظیم دمای این چیلر را ندارید", "error");
+      showToast("شما دسترسی تنظیم دمای این پکیج را ندارید", "error");
       return { ok: false };
     }
     if (!payload.ip) {
-      showToast("IP چیلر تنظیم نشده است", "error");
+      showToast("IP پکیج تنظیم نشده است", "error");
       return { ok: false };
     }
     let ok = false;
@@ -243,11 +308,11 @@ export function DashboardPage() {
     if (ok) {
       showToast("دمای کامفورت با موفقیت اعمال شد", "success");
     } else if (forbidden) {
-      showToast("اجازه تنظیم دمای این چیلر را ندارید", "error");
+      showToast("اجازه تنظیم دمای این پکیج را ندارید", "error");
     } else if (unreachable) {
-      showToast("ارتباط با چیلر برقرار نشد", "error");
+      showToast("ارتباط با پکیج برقرار نشد", "error");
     } else {
-      showToast("خطا در ارسال تنظیم دما به چیلر", "error");
+      showToast("خطا در ارسال تنظیم دما به پکیج", "error");
     }
 
     return { ok, actual };
@@ -264,7 +329,7 @@ export function DashboardPage() {
     });
   };
 
-  const canControlChillers = role === "admin" || role === "manager";
+  const canControlChillers = !!(mePermissions && (mePermissions.canTogglePower || mePermissions.canSetTemperature || mePermissions.canControlTimer));
 
   const isDark = theme === "dark";
 
@@ -280,75 +345,87 @@ export function DashboardPage() {
         }`}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <img src={fanapLogo.src} alt="Fanap" className="h-6 w-auto shrink-0" />
-              <span className="font-semibold text-sm sm:text-base truncate">
-                سیستم سرمایشی فناپ تک
-              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-sm sm:text-base truncate">سیستم سرمایشی فناپ تک</span>
+                <span className={`text-[11px] sm:text-xs truncate ${isDark ? "text-slate-400" : "text-zinc-500"}`}>
+                  کنترل و نظارت هوشمند پکیج‌ها
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div
+            className={`inline-flex items-center gap-2 px-2 py-2 rounded-2xl border ${
+              isDark ? "border-zinc-700 bg-white/5" : "border-zinc-300 bg-zinc-100"
+            }`}
+          >
             <span
-              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs sm:text-sm font-bold border ${
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-xl text-[11px] sm:text-xs font-semibold ${
                 connection === "online"
                   ? isDark
-                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                    : "border-emerald-500/30 bg-emerald-50 text-emerald-700"
+                    ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/40"
+                    : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-400/40"
                   : connection === "offline"
                     ? isDark
-                      ? "border-red-500/60 bg-red-500/10 text-red-400"
-                      : "border-red-500/40 bg-red-50 text-red-600"
+                      ? "bg-red-500/10 text-red-400 ring-1 ring-red-500/40"
+                      : "bg-red-50 text-red-600 ring-1 ring-red-400/40"
                     : isDark
-                      ? "border-amber-400/60 bg-amber-500/10 text-amber-300"
-                      : "border-amber-400/50 bg-amber-50 text-amber-600"
+                      ? "bg-amber-500/10 text-amber-300 ring-1 ring-amber-400/40"
+                      : "bg-amber-50 text-amber-600 ring-1 ring-amber-400/40"
               }`}
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  connection === "online"
-                    ? "bg-emerald-400"
-                    : connection === "offline"
-                      ? "bg-red-500"
-                      : "bg-amber-400"
-                }`}
-              />
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                <circle cx="12" cy="12" r="6" className={
+                  connection === "online" ? "fill-emerald-400" : connection === "offline" ? "fill-red-500" : "fill-amber-400"
+                } />
+              </svg>
               {connection === "online"
                 ? "متصل"
                 : connection === "offline"
-                  ? "ارتباط با چیلر قطع هستش"
-                  : "در حال اتصال..."}
+                  ? "ارتباط قطع"
+                  : "در حال اتصال"}
             </span>
             <button
               type="button"
               onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold border transition ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
-                  ? "bg-white/10 border-zinc-700 hover:bg-white/15"
-                  : "bg-zinc-100 border-zinc-300 hover:bg-zinc-200"
+                  ? "bg-white/10 hover:bg-white/15 text-slate-100"
+                  : "bg-white hover:bg-zinc-200 text-zinc-800"
               }`}
             >
-              تم: {theme === "dark" ? "تاریک" : "روشن"}
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                <path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
+              </svg>
+              {theme === "dark" ? "تاریک" : "روشن"}
             </button>
             <a
               href="/admin"
-              className={`px-3 py-1 rounded-xl text-xs font-semibold border transition ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
-                  ? "bg-white/10 border-zinc-700 hover:bg-white/15"
-                  : "bg-zinc-100 border-zinc-300 hover:bg-zinc-200"
+                  ? "bg-white/10 hover:bg-white/15 text-slate-100"
+                  : "bg-white hover:bg-zinc-200 text-zinc-800"
               }`}
             >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                <path d="M12 6l2 3 4 .5-3 2.5.8 3.9-3.8-1.8-3.8 1.8.8-3.9-3-2.5 4-.5 2-3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
+              </svg>
               مدیریت
             </a>
             <button
               type="button"
               onClick={handleLogout}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold border transition ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
-                  ? "bg-white/10 border-zinc-700 hover:bg-white/15"
-                  : "bg-zinc-100 border-zinc-300 hover:bg-zinc-200"
+                  ? "bg-white/10 hover:bg-white/15 text-slate-100"
+                  : "bg-white hover:bg-zinc-200 text-zinc-800"
               }`}
             >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                <path d="M10 3h8a1 1 0 0 1 1 1v4h-2V5h-6v14h6v-3h2v4a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm4 8h-8v2h8v3l4-4-4-4v3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
+              </svg>
               خروج
             </button>
           </div>
@@ -358,7 +435,7 @@ export function DashboardPage() {
       <main className="flex-1 px-4 py-4 lg:px-6 lg:py-6">
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold">چیلرها</h1>
+            <h1 className="text-lg font-semibold">پکیج‌ها</h1>
             {loading && <span className="text-xs text-zinc-400">در حال بارگذاری...</span>}
           </div>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
@@ -370,6 +447,12 @@ export function DashboardPage() {
                 active={c.active}
                 mode={theme}
                 canControl={canControlChillers}
+                progressOnSeconds={
+                  (progressByChiller[c.id]?.progressOnSeconds ?? progressOnSeconds)
+                }
+                progressOffSeconds={
+                  (progressByChiller[c.id]?.progressOffSeconds ?? progressOffSeconds)
+                }
                 onTogglePower={handleTogglePower}
                 onApplySetpoint={handleApplySetpoint}
               />
@@ -382,7 +465,7 @@ export function DashboardPage() {
                     : "border-zinc-300 text-zinc-500 bg-white"
                 }`}
               >
-                هیچ چیلری در تنظیمات تعریف نشده است.
+                هیچ پکیجی در تنظیمات تعریف نشده است.
               </div>
             )}
           </div>
@@ -407,7 +490,7 @@ export function DashboardPage() {
                 در حال آماده‌سازی اطلاعات سیستم
               </h2>
               <p className="text-xs sm:text-sm leading-relaxed text-center max-w-sm">
-                تا آماده شدن اطلاعات چیلرها ممکن است چندین ثانیه زمان نیاز باشد.
+                تا آماده شدن اطلاعات پکیج‌ها ممکن است چندین ثانیه زمان نیاز باشد.
                 از صبوری و شکیبایی شما سپاسگزاریم.
               </p>
             </div>
