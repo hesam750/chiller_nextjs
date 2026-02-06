@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { WithAccess } from "@/app/_components/rbac";
+import { AdminChillerStats } from "@/app/admin/_components/AdminChillerStats";
+import { AdminAddChillerSection } from "@/app/admin/_components/AdminAddChillerSection";
 import fanapLogo from "../../../fanap.png";
+import Image from "next/image";
+import { LogsPanel } from "@/app/admin/_components/LogsPanel";
+import { AdminPdgPanel } from "@/app/admin/_components/AdminPdgPanel";
+import { ChillerCard } from "@/app/admin/_components/ChillerCard";
 
 type Chiller = {
   id: string;
@@ -26,6 +33,13 @@ type PdgItem = {
   url: string;
 };
 
+type ActivityLog = {
+  id: string;
+  username: string;
+  action: string;
+  at: string;
+  details?: Record<string, unknown>;
+};
 type Role = "admin" | "manager" | "viewer" | "guest";
 
 export default function AdminPage() {
@@ -58,6 +72,9 @@ export default function AdminPage() {
   const [permAddPackage, setPermAddPackage] = useState(false);
   const [permManageUsers, setPermManageUsers] = useState(false);
   const [permViewLogs, setPermViewLogs] = useState(false);
+  const [permViewChillers, setPermViewChillers] = useState(false);
+  const [permViewPdgs, setPermViewPdgs] = useState(false);
+  const [permViewUserActivity, setPermViewUserActivity] = useState(false);
   const [progressOnSeconds, setProgressOnSeconds] = useState(60);
   const [progressOffSeconds, setProgressOffSeconds] = useState(60);
   const [progressByChiller, setProgressByChiller] = useState<Record<string, { progressOnSeconds: number; progressOffSeconds: number }>>({});
@@ -66,6 +83,10 @@ export default function AdminPage() {
   const [savingUser, setSavingUser] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<"empty" | "weak" | "medium" | "strong">("empty");
   const [formError, setFormError] = useState<string | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityUserFilter, setActivityUserFilter] = useState("");
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityLimit, setActivityLimit] = useState(50);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     if (
@@ -110,9 +131,9 @@ export default function AdminPage() {
         location.href = "/login";
       });
 
-    fetch("/api/chillers")
-      .then((r) => r.json())
-      .then((j) => setChillers(j.items || []))
+    import("@/lib/services/chillers")
+      .then((m) => m.fetchChillers())
+      .then((items) => setChillers(items))
       .catch(() => {
         setMsg("خطا در دریافت لیست");
         setToast({ message: "خطا در دریافت لیست پکیج‌ها", type: "error" });
@@ -124,19 +145,27 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    setActivityLoading(true);
+    const q = activityUserFilter.trim().length
+      ? `/api/activity-log?username=${encodeURIComponent(activityUserFilter)}&limit=${activityLimit}`
+      : `/api/activity-log?limit=${activityLimit}`;
+    fetch(q)
+      .then((r) => r.json())
+      .then((j) => setActivityLogs(Array.isArray(j.items) ? j.items : []))
+      .catch(() => undefined)
+      .finally(() => setActivityLoading(false));
+  }, [activityUserFilter, activityLimit]);
+
+  useEffect(() => {
     if (!Array.isArray(chillers) || chillers.length === 0) return;
     let cancelled = false;
     const load = async () => {
       const entries = await Promise.all(
         chillers.map(async (c) => {
           try {
-            const r = await fetch("/api/settings?chillerId=" + encodeURIComponent(c.id));
-            if (!r.ok) return [c.id, null] as const;
-            const j = await r.json().catch(() => null);
-            const item = j && j.item ? j.item : null;
-            if (!item || typeof item.progressOnSeconds !== "number" || typeof item.progressOffSeconds !== "number") {
-              return [c.id, null] as const;
-            }
+            const m = await import("@/lib/services/settings");
+            const item = await m.getSettingsForChiller(c.id);
+            if (!item) return [c.id, null] as const;
             return [
               c.id,
               {
@@ -164,14 +193,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!(mePermissions && mePermissions.canViewLogs)) return;
-    fetch("/api/power-log")
-      .then((r) => r.json())
-      .then((j) => setLogs(j.items || []))
+    import("@/lib/services/powerLog")
+      .then((m) => m.fetchPowerLog())
+      .then((items) => setLogs(items))
       .catch(() => undefined);
     const id = setInterval(() => {
-      fetch("/api/power-log")
-        .then((r) => r.json())
-        .then((j) => setLogs(j.items || []))
+      import("@/lib/services/powerLog")
+        .then((m) => m.fetchPowerLog())
+        .then((items) => setLogs(items))
         .catch(() => undefined);
     }, 5000);
     return () => clearInterval(id);
@@ -193,14 +222,18 @@ export default function AdminPage() {
   }, [role]);
 
   useEffect(() => {
-    fetch("/api/settings")
+    if (!(role === "manager" || role === "admin")) return;
+    fetch("/api/activity-log")
       .then((r) => r.json())
-      .then((j) => {
-        const item = j && j.item ? j.item : {};
-        const onS = typeof item.progressOnSeconds === "number" ? item.progressOnSeconds : 60;
-        const offS = typeof item.progressOffSeconds === "number" ? item.progressOffSeconds : 60;
-        setProgressOnSeconds(Math.max(1, Math.round(onS)));
-        setProgressOffSeconds(Math.max(1, Math.round(offS)));
+      .then((j) => setActivityLogs(Array.isArray(j.items) ? j.items : []))
+      .catch(() => undefined);
+  }, [role]);
+  useEffect(() => {
+    import("@/lib/services/settings")
+      .then((m) => m.getGlobalSettings())
+      .then((item) => {
+        setProgressOnSeconds(item.progressOnSeconds);
+        setProgressOffSeconds(item.progressOffSeconds);
       })
       .catch(() => undefined);
   }, []);
@@ -284,35 +317,12 @@ export default function AdminPage() {
     return sessions;
   }, [logs, now]);
 
-  const formatDuration = (ms: number | undefined) => {
-    if (!ms || ms <= 0) return "";
-    const totalSeconds = Math.floor(ms / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const parts: string[] = [];
-    if (days > 0) {
-      parts.push(`${days} روز`);
-    }
-    if (hours > 0) {
-      parts.push(`${hours} ساعت`);
-    }
-    if (minutes > 0) {
-      parts.push(`${minutes} دقیقه`);
-    }
-    if (seconds > 0 && parts.length === 0) {
-      parts.push(`${seconds} ثانیه`);
-    }
-    if (!parts.length) return "کمتر از یک ثانیه";
-    return parts.join(" و ");
-  };
+ 
 
   const canEditChillers =
     role === "admin" ||
-    role === "manager" ||
     !!(mePermissions && mePermissions.canAddPackage);
-  const canSeeChillersSection = role === "admin" || role === "manager";
+  
 
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -331,6 +341,9 @@ export default function AdminPage() {
       setPermAddPackage(true);
       setPermManageUsers(true);
       setPermViewLogs(true);
+      setPermViewChillers(true);
+      setPermViewPdgs(true);
+      setPermViewUserActivity(true);
     } else if (r === "manager") {
       setPermViewTimer(true);
       setPermControlTimer(true);
@@ -339,6 +352,9 @@ export default function AdminPage() {
       setPermAddPackage(false);
       setPermManageUsers(true);
       setPermViewLogs(true);
+      setPermViewChillers(true);
+      setPermViewPdgs(true);
+      setPermViewUserActivity(true);
     } else {
       setPermViewTimer(true);
       setPermControlTimer(false);
@@ -347,6 +363,9 @@ export default function AdminPage() {
       setPermAddPackage(false);
       setPermManageUsers(false);
       setPermViewLogs(false);
+      setPermViewChillers(false);
+      setPermViewPdgs(false);
+      setPermViewUserActivity(false);
     }
   };
 
@@ -378,12 +397,12 @@ export default function AdminPage() {
   }, [users, userSearch]);
 
   const reload = () => {
-    fetch("/api/chillers")
-      .then((r) => r.json())
-      .then((j) => setChillers(j.items || []))
+    import("@/lib/services/chillers")
+      .then((m) => m.fetchChillers())
+      .then((items) => setChillers(items))
       .catch(() => {
         setMsg("خطا در دریافت لیست");
-      showToast("خطا در دریافت لیست پکیج‌ها", "error");
+        showToast("خطا در دریافت لیست پکیج‌ها", "error");
       });
   };
 
@@ -393,42 +412,33 @@ export default function AdminPage() {
       return;
     }
     setMsg("در حال افزودن...");
-    const res = await fetch("/api/chillers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, ip, active }),
-    });
-    if (!res.ok) {
+    const m = await import("@/lib/services/chillers");
+    const item = await m.addChiller({ name, ip, active });
+    if (!item) {
       setMsg("خطا در افزودن");
       showToast("خطا در افزودن پکیج", "error");
       return;
     }
-    const data = await res.json();
-    setChillers((prev) => [...prev, data.item]);
+    setChillers((prev) => [...prev, item]);
     setName("");
     setIp("");
     setActive(true);
     setMsg("افزوده شد");
     showToast("پکیج با موفقیت افزوده شد", "success");
     try {
-      const r2 = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chillerId: data.item.id,
-          progressOnSeconds: Math.max(1, Math.round(progressOnSeconds)),
-          progressOffSeconds: Math.max(1, Math.round(progressOffSeconds)),
-        }),
+      const m2 = await import("@/lib/services/settings");
+      const res2 = await m2.updateChillerSettings({
+        chillerId: item.id,
+        progressOnSeconds: Math.max(1, Math.round(progressOnSeconds)),
+        progressOffSeconds: Math.max(1, Math.round(progressOffSeconds)),
       });
-      if (r2.ok) {
-        const j2 = await r2.json().catch(() => null);
-        const item2 = j2 && j2.item ? j2.item : null;
-        if (item2 && typeof item2.progressOnSeconds === "number" && typeof item2.progressOffSeconds === "number") {
+      if (res2) {
+        if (typeof res2.progressOnSeconds === "number" && typeof res2.progressOffSeconds === "number") {
           setProgressByChiller((prev) => ({
             ...prev,
-            [data.item.id]: {
-              progressOnSeconds: item2.progressOnSeconds,
-              progressOffSeconds: item2.progressOffSeconds,
+            [item.id]: {
+              progressOnSeconds: res2.progressOnSeconds,
+              progressOffSeconds: res2.progressOffSeconds,
             },
           }));
         }
@@ -443,12 +453,9 @@ export default function AdminPage() {
       return;
     }
     setMsg("در حال ذخیره...");
-    const res = await fetch("/api/chillers/" + encodeURIComponent(c.id), {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: c.name, ip: c.ip, active: c.active }),
-    });
-    if (!res.ok) {
+    const m = await import("@/lib/services/chillers");
+    const ok = await m.updateChiller(c.id, { name: c.name, ip: c.ip, active: c.active });
+    if (!ok) {
       setMsg("خطا در ذخیره");
       showToast("خطا در ذخیره تغییرات پکیج", "error");
       return;
@@ -466,21 +473,17 @@ export default function AdminPage() {
       progressOnSeconds,
       progressOffSeconds,
     };
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chillerId: c.id,
-        progressOnSeconds: Math.max(1, Math.round(cur.progressOnSeconds)),
-        progressOffSeconds: Math.max(1, Math.round(cur.progressOffSeconds)),
-      }),
+    const m = await import("@/lib/services/settings");
+    const res = await m.updateChillerSettings({
+      chillerId: c.id,
+      progressOnSeconds: Math.max(1, Math.round(cur.progressOnSeconds)),
+      progressOffSeconds: Math.max(1, Math.round(cur.progressOffSeconds)),
     });
-    if (!res.ok) {
+    if (!res) {
       showToast("خطا در ذخیره زمان پروگرس این پکیج", "error");
       return;
     }
-    const j = await res.json().catch(() => null);
-    const item = j && j.item ? j.item : null;
+    const item = res;
     if (item && typeof item.progressOnSeconds === "number" && typeof item.progressOffSeconds === "number") {
       setProgressByChiller((prev) => ({
         ...prev,
@@ -500,10 +503,9 @@ export default function AdminPage() {
       showToast("شما دسترسی حذف پکیج را ندارید", "error");
       return;
     }
-    const res = await fetch("/api/chillers/" + encodeURIComponent(id), {
-      method: "DELETE",
-    });
-    if (!res.ok) {
+    const m = await import("@/lib/services/chillers");
+    const ok = await m.deleteChiller(id);
+    if (!ok) {
       setMsg("خطا در حذف");
       showToast("خطا در حذف پکیج", "error");
       return;
@@ -544,42 +546,32 @@ export default function AdminPage() {
     }
 
     setMsg("در حال افزودن PDG...");
-    const res = await fetch("/api/chillers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: pdgName, ip: pdgIp, active: true }),
-    });
-    if (!res.ok) {
+    const m = await import("@/lib/services/chillers");
+    const item = await m.addChiller({ name: pdgName, ip: pdgIp, active: true });
+    if (!item) {
       setMsg("خطا در افزودن PDG");
       showToast("خطا در افزودن PDG", "error");
       return;
     }
-    const data = await res.json();
-    setChillers((prev) => [...prev, data.item]);
+    setChillers((prev) => [...prev, item]);
     setPdgName("");
     setPdgIp("");
-    setPdgModalOpen(false);
     setMsg("PDG افزوده شد");
     showToast("PDG با موفقیت افزوده شد", "success");
     try {
-      const r2 = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chillerId: data.item.id,
-          progressOnSeconds: Math.max(1, Math.round(progressOnSeconds)),
-          progressOffSeconds: Math.max(1, Math.round(progressOffSeconds)),
-        }),
+      const m2 = await import("@/lib/services/settings");
+      const res2 = await m2.updateChillerSettings({
+        chillerId: item.id,
+        progressOnSeconds: Math.max(1, Math.round(progressOnSeconds)),
+        progressOffSeconds: Math.max(1, Math.round(progressOffSeconds)),
       });
-      if (r2.ok) {
-        const j2 = await r2.json().catch(() => null);
-        const item2 = j2 && j2.item ? j2.item : null;
-        if (item2 && typeof item2.progressOnSeconds === "number" && typeof item2.progressOffSeconds === "number") {
+      if (res2) {
+        if (typeof res2.progressOnSeconds === "number" && typeof res2.progressOffSeconds === "number") {
           setProgressByChiller((prev) => ({
             ...prev,
-            [data.item.id]: {
-              progressOnSeconds: item2.progressOnSeconds,
-              progressOffSeconds: item2.progressOffSeconds,
+            [item.id]: {
+              progressOnSeconds: res2.progressOnSeconds,
+              progressOffSeconds: res2.progressOffSeconds,
             },
           }));
         }
@@ -594,10 +586,9 @@ export default function AdminPage() {
       return;
     }
 
-    const res = await fetch("/api/chillers/" + encodeURIComponent(id), {
-      method: "DELETE",
-    });
-    if (!res.ok) {
+    const m = await import("@/lib/services/chillers");
+    const ok = await m.deleteChiller(id);
+    if (!ok) {
       setMsg("خطا در حذف PDG");
       showToast("خطا در حذف PDG", "error");
       return;
@@ -642,7 +633,7 @@ export default function AdminPage() {
         }
       >
         <div className="flex items-center gap-2">
-          <img src={fanapLogo.src} alt="Fanap" className="h-6 w-auto" />
+          <Image src={fanapLogo} alt="Fanap" className="h-6 w-auto" />
           <strong className="text-sm">پنل ادمین</strong>
         </div>
         <div className="flex items-center gap-2">
@@ -656,6 +647,19 @@ export default function AdminPage() {
           >
             داشبورد
           </a>
+          {role === "manager" && (
+            <button
+              type="button"
+              onClick={() => setUsersModalOpen(true)}
+              className={
+                theme === "dark"
+                  ? "rounded-lg bg-blue-500 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-600"
+                  : "rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+              }
+            >
+              مدیریت پیشرفته کاربران
+            </button>
+          )}
           <button
             type="button"
             onClick={() =>
@@ -692,790 +696,282 @@ export default function AdminPage() {
       </header>
       <main className="px-4 py-4 space-y-4">
         <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-          {canSeeChillersSection && (
-            <>
+          <WithAccess
+            anyRoles={["admin", "manager"]}
+            loadingFallback={
               <div
                 className={
                   theme === "dark"
-                    ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow"
-                    : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow"
+                    ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow animate-pulse"
+                    : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow animate-pulse"
                 }
               >
-                <div className="text-[11px] text-slate-400 mb-1">تعداد پکیج‌ها</div>
-                <div className="text-2xl font-semibold">{chillers.length}</div>
+                <div className="h-4 w-24 bg-slate-700 rounded mb-2" />
+                <div className="h-6 w-16 bg-slate-700 rounded" />
               </div>
-              <div
-                className={
-                  theme === "dark"
-                    ? "rounded-2xl border border-emerald-600/70 bg-emerald-900/10 px-4 py-3 shadow"
-                    : "rounded-2xl border border-emerald-500/40 bg-emerald-50 px-4 py-3 shadow"
-                }
-              >
-                <div className="text-[11px] text-emerald-300 mb-1">پکیج‌های فعال</div>
-                <div className="text-2xl font-semibold text-emerald-300">
-                  {chillers.filter((c) => c.active).length}
-                </div>
-              </div>
-            </>
-          )}
-          <div
-            className={
-              theme === "dark"
-                ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow"
-                : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow"
             }
           >
-            <div className="text-[11px] text-slate-400 mb-1">آخرین رویداد</div>
-            <div className="text-xs text-slate-300 ltr">
-              {logs.length
-                ? new Date(logs[0].at).toLocaleString("fa-IR")
-                : "ثبت نشده"}
-            </div>
-          </div>
-          <div
-            className={
-              theme === "dark"
-                ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow"
-                : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow"
-            }
-          >
-            <div className="text-[11px] text-slate-400 mb-1">تعداد رویدادها</div>
-            <div className="text-2xl font-semibold">{logs.length}</div>
-          </div>
+            <AdminChillerStats
+              theme={theme}
+              total={chillers.length}
+              activeCount={chillers.filter((c) => c.active).length}
+            />
+          </WithAccess>
         </section>
 
         <div className="grid gap-4 lg:grid-cols-12">
-          {canSeeChillersSection && (
-            <section
-              className={
-                theme === "dark"
-                  ? "lg:col-span-12 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl"
-                  : "lg:col-span-12 rounded-2xl border border-slate-200 bg-white shadow-xl"
-              }
-            >
-              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-                <div className="text-sm font-semibold">افزودن پکیج</div>
+          <WithAccess
+            anyRoles={["admin"]}
+            anyPerms={["canAddPackage"]}
+            loadingFallback={
+              <div
+                className={
+                  theme === "dark"
+                    ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow animate-pulse"
+                    : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow animate-pulse"
+                }
+              >
+                <div className="h-4 w-36 bg-slate-700 rounded mb-2" />
+                <div className="h-8 w-full bg-slate-700 rounded" />
               </div>
-              <div className="px-4 py-4 space-y-3">
-                <div className="grid gap-3 md:grid-cols-[1.2fr,1.2fr,auto,auto] items-end">
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">
-                      نام
-                    </label>
-                    <input
-                      className={
-                        theme === "dark"
-                          ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-                          : "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                      }
-                      placeholder="مثلاً پکیج ۱"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">
-                      آدرس IP
-                    </label>
-                    <input
-                      className={
-                        theme === "dark"
-                          ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm ltr text-left text-slate-100"
-                          : "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm ltr text-left text-slate-900"
-                      }
-                      placeholder="مثلاً 192.168.1.10"
-                      value={ip}
-                      onChange={(e) => setIp(e.target.value)}
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 text-xs text-slate-400">
-                    <span>فعال</span>
-                    <input
-                      type="checkbox"
-                      checked={active}
-                      onChange={(e) => setActive(e.target.checked)}
-                    />
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAdd}
-                      disabled={!canEditChillers}
-                      className={
-                        theme === "dark"
-                          ? "rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-white"
-                          : "rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-                      }
-                    >
-                      افزودن پکیج
-                    </button>
-                    <button
-                      type="button"
-                      onClick={reload}
-                      className={
-                        theme === "dark"
-                          ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs text-slate-100"
-                          : "rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 hover:bg-slate-50"
-                      }
-                    >
-                      تازه‌سازی لیست
-                    </button>
-                  </div>
-                </div>
-                <div className="text-xs text-slate-400 min-h-[20px]">{msg}</div>
-              </div>
-            </section>
-          )}
+            }
+          >
+            <AdminAddChillerSection
+              theme={theme}
+              canEditChillers={canEditChillers}
+              msg={msg}
+              name={name}
+              ip={ip}
+              active={active}
+              onChangeName={setName}
+              onChangeIp={setIp}
+              onChangeActive={setActive}
+              onAdd={handleAdd}
+              onReload={reload}
+            />
+          </WithAccess>
 
           <section className="lg:col-span-12 mt-4 grid gap-4 lg:grid-cols-[2fr,1fr]">
-            {canSeeChillersSection && (
+            <WithAccess
+              anyRoles={["admin", "manager"]}
+              anyPerms={["canViewChillers"]}
+              loadingFallback={
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                      key={i}
+                      className={
+                        theme === "dark"
+                          ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow animate-pulse"
+                          : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow animate-pulse"
+                      }
+                    >
+                      <div className="h-4 w-24 bg-slate-700 rounded mb-2" />
+                      <div className="h-4 w-36 bg-slate-700 rounded" />
+                    </div>
+                  ))}
+                </div>
+              }
+            >
               <div>
                 <h4 className="mb-3 text-sm font-semibold">پکیج‌ها</h4>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {chillers.map((c) => (
-                    <div
+                    <ChillerCard
                       key={c.id}
-                      className={
-                        theme === "dark"
-                          ? `rounded-2xl border bg-slate-950 px-4 py-3 shadow-lg ${
-                              c.active
-                                ? "border-emerald-500/40"
-                                : "border-slate-800 opacity-80"
-                            }`
-                          : `rounded-2xl border bg-white px-4 py-3 shadow-lg ${
-                              c.active
-                                ? "border-emerald-500/40"
-                                : "border-slate-200 opacity-80"
-                            }`
+                      theme={theme}
+                      chiller={c}
+                      canEditChillers={canEditChillers}
+                      progressDefaultOn={progressOnSeconds}
+                      progressDefaultOff={progressOffSeconds}
+                      progress={progressByChiller[c.id] || null}
+                      onChangeChiller={(id, patch) =>
+                        setChillers((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)))
                       }
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <div className="font-semibold text-sm">{c.name}</div>
-                          <div className="text-[11px] text-slate-500 ltr">
-                            {c.ip}
-                          </div>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold ${
-                            c.active
-                              ? "bg-emerald-500/15 text-emerald-400"
-                              : "bg-slate-700/40 text-slate-300"
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full bg-current" />
-                          {c.active ? "فعال" : "غیرفعال"}
-                        </span>
-                      </div>
-                      <div className="space-y-2 mt-2">
-                        <input
-                          className={
-                            theme === "dark"
-                              ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-                              : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
-                          }
-                          value={c.name}
-                          readOnly={!canEditChillers}
-                          onChange={(e) =>
-                            setChillers((prev) =>
-                              prev.map((x) =>
-                                x.id === c.id ? { ...x, name: e.target.value } : x
-                              )
-                            )
-                          }
-                        />
-                        <input
-                          className={
-                            theme === "dark"
-                              ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs ltr text-slate-100"
-                              : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs ltr text-slate-900"
-                          }
-                          value={c.ip}
-                          readOnly={!canEditChillers}
-                          onChange={(e) =>
-                            setChillers((prev) =>
-                              prev.map((x) =>
-                                x.id === c.id ? { ...x, ip: e.target.value } : x
-                              )
-                            )
-                          }
-                        />
-                        <label className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>فعال</span>
-                          <input
-                            type="checkbox"
-                            checked={c.active}
-                            disabled={!canEditChillers}
-                            onChange={(e) =>
-                              setChillers((prev) =>
-                                prev.map((x) =>
-                                  x.id === c.id
-                                    ? { ...x, active: e.target.checked }
-                                    : x
-                                )
-                              )
-                            }
-                          />
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-slate-400 mb-1 block">زمان روشن شدن (ثانیه)</label>
-                            <input
-                              type="number"
-                              min={1}
-                              className={
-                                theme === "dark"
-                                  ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-                                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
-                              }
-                              value={
-                                (progressByChiller[c.id]?.progressOnSeconds ??
-                                  progressOnSeconds)
-                              }
-                              readOnly={!canEditChillers}
-                              onChange={(e) =>
-                                setProgressByChiller((prev) => ({
-                                  ...prev,
-                                  [c.id]: {
-                                    progressOnSeconds: Math.max(
-                                      1,
-                                      Math.round(Number(e.target.value) || 0),
-                                    ),
-                                    progressOffSeconds:
-                                      prev[c.id]?.progressOffSeconds ??
-                                      progressOffSeconds,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-slate-400 mb-1 block">زمان خاموش شدن (ثانیه)</label>
-                            <input
-                              type="number"
-                              min={1}
-                              className={
-                                theme === "dark"
-                                  ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-                                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
-                              }
-                              value={
-                                (progressByChiller[c.id]?.progressOffSeconds ??
-                                  progressOffSeconds)
-                              }
-                              readOnly={!canEditChillers}
-                              onChange={(e) =>
-                                setProgressByChiller((prev) => ({
-                                  ...prev,
-                                  [c.id]: {
-                                    progressOnSeconds:
-                                      prev[c.id]?.progressOnSeconds ??
-                                      progressOnSeconds,
-                                    progressOffSeconds: Math.max(
-                                      1,
-                                      Math.round(Number(e.target.value) || 0),
-                                    ),
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleSave(c)}
-                            disabled={!canEditChillers}
-                            className="flex-1 rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white"
-                          >
-                            ذخیره
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(c.id)}
-                            disabled={!canEditChillers}
-                            className="flex-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white"
-                          >
-                            حذف
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveProgressForChiller(c)}
-                            disabled={!canEditChillers}
-                            className="flex-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white"
-                          >
-                            ذخیره زمان پروگرس
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      onChangeProgress={(id, next) =>
+                        setProgressByChiller((prev) => ({
+                          ...prev,
+                          [id]: {
+                            progressOnSeconds: next.progressOnSeconds,
+                            progressOffSeconds: next.progressOffSeconds,
+                          },
+                        }))
+                      }
+                      onSave={handleSave}
+                      onDelete={handleDelete}
+                      onSaveProgress={handleSaveProgressForChiller}
+                    />
                   ))}
                 </div>
               </div>
-            )}
+            </WithAccess>
 
-            {mePermissions && mePermissions.canViewLogs && (
-            <aside
-              className={
-                theme === "dark"
-                  ? "rounded-2xl border border-slate-800 bg-slate-950 shadow-lg p-4 flex flex-col gap-3 max-h-[460px]"
-                  : "rounded-2xl border border-slate-200 bg-sky-50/80 shadow-lg p-4 flex flex-col gap-3 max-h-[460px]"
+            <WithAccess
+              anyPerms={["canViewLogs"]}
+              loadingFallback={
+                <aside
+                  className={
+                    theme === "dark"
+                      ? "rounded-2xl border border-slate-800 bg-slate-950 shadow-lg p-4 animate-pulse"
+                      : "rounded-2xl border border-slate-200 bg-slate-100 shadow-lg p-4 animate-pulse"
+                  }
+                >
+                  <div className="h-4 w-24 bg-slate-700 rounded mb-3" />
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-8 w-full bg-slate-700/60 rounded" />
+                    ))}
+                  </div>
+                </aside>
               }
             >
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold">لاگ خاموش/روشن</h2>
-              </div>
-              <div className="flex-1 overflow-auto">
-                {logs.length === 0 ? (
-                  <div
-                    className={
-                      theme === "dark"
-                        ? "text-xs text-slate-400"
-                        : "text-xs text-black"
-                    }
-                  >
-                    هنوز لاگی ثبت نشده است.
-                  </div>
-                ) : (
-                  <ul className="space-y-2 text-sm">
-                    {powerSessions.map((session) => {
-                      const durationText = formatDuration(session.durationMs);
-                      const startDate = new Date(session.startAt);
-                      const endDate = session.endAt
-                        ? new Date(session.endAt)
-                        : new Date(now);
-                      const startDateText = startDate.toLocaleDateString("fa-IR");
-                      const startTimeText = startDate.toLocaleTimeString("fa-IR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      });
-                      const endDateText = endDate.toLocaleDateString("fa-IR");
-                      const endTimeText = endDate.toLocaleTimeString("fa-IR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      });
-                      return (
-                        <li
-                          key={session.id}
-                          className={`rounded-xl px-3 py-2 border flex items-stretch justify-between gap-4 transition-colors ${
-                            theme === "dark"
-                              ? "bg-slate-900/80 border-slate-800"
-                              : "bg-white border-slate-200 hover:border-sky-200/80 hover:bg-sky-50/60"
-                          } ${
-                            session.state === "on"
-                              ? "shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
-                              : "shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
-                          }`}
-                        >
-                          <div className="flex flex-col items-end gap-1 text-right min-w-[170px]">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={
-                                  session.state === "on"
-                                    ? "inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.35)]"
-                                    : "inline-flex h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_0_4px_rgba(248,113,113,0.35)]"
-                                }
-                              />
-                              <span className="text-sm font-semibold">
-                                {session.unitName}
-                              </span>
-                            </div>
-                            <div
-                              className={`flex flex-col gap-0.5 text-xs ${
-                                theme === "dark" ? "text-slate-400" : "text-black"
-                              }`}
-                            >
-                              <div className="flex flex-col items-end gap-0.5">
-                                <span className="text-xs font-semibold">
-                                  {session.state === "on" ? "روشن شد" : "خاموش شد"}
-                                </span>
-                                <div className="flex gap-1">
-                                  <span
-                                    className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                      theme === "dark"
-                                        ? "bg-slate-800/60 text-slate-100"
-                                        : "bg-slate-200 text-slate-800"
-                                    }`}
-                                  >
-                                    {startDateText}
-                                  </span>
-                                  <span
-                                    className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                      theme === "dark"
-                                        ? "bg-slate-800/60 text-slate-100"
-                                        : "bg-slate-200 text-slate-800"
-                                    }`}
-                                  >
-                                    {startTimeText}
-                                  </span>
-                                </div>
-                              </div>
-                              {session.endAt && (
-                                <div className="flex flex-col items-end gap-0.5 mt-1">
-                                  <span className="text-xs font-semibold">
-                                    {session.state === "on" ? "خاموش شد" : "روشن شد"}
-                                  </span>
-                                  <div className="flex gap-1">
-                                    <span
-                                      className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                        theme === "dark"
-                                          ? "bg-slate-800/60 text-slate-100"
-                                          : "bg-slate-200 text-slate-800"
-                                      }`}
-                                    >
-                                      {endDateText}
-                                    </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                        theme === "dark"
-                                          ? "bg-slate-800/60 text-slate-100"
-                                          : "bg-slate-200 text-slate-800"
-                                      }`}
-                                    >
-                                      {endTimeText}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                              {!session.endAt && (
-                                <span
-                                  className={
-                                    theme === "dark"
-                                      ? "mt-1 text-xs text-amber-400"
-                                      : "mt-1 text-xs text-black"
-                                  }
-                                >
-                                  {session.state === "on"
-                                    ? "هنوز خاموش نشده (تایمر در حال شمارش)"
-                                    : "هنوز روشن نشده (تایمر در حال شمارش)"}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-start gap-1 text-sm">
-                            <span
-                              className={
-                                session.state === "on"
-                                  ? `inline-flex items-center rounded-full px-2 py-0.5 border ${
-                                      theme === "dark"
-                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40"
-                                        : "bg-emerald-50 text-black border-emerald-200"
-                                    }`
-                                  : `inline-flex items-center rounded-full px-2 py-0.5 border ${
-                                      theme === "dark"
-                                        ? "bg-red-500/10 text-red-400 border-red-500/40"
-                                        : "bg-red-50 text-black border-red-200"
-                                    }`
-                              }
-                            >
-                              در این بازه{" "}
-                              {session.state === "on" ? "روشن بوده" : "خاموش بوده"}
-                            </span>
-                            <div
-                              className={`flex flex-wrap items-center gap-1 text-xs ${
-                                theme === "dark" ? "text-slate-400" : "text-black"
-                              }`}
-                            >
-                              <span>از</span>
-                              <span
-                                className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                  theme === "dark"
-                                    ? "bg-slate-800/40 text-slate-100"
-                                    : "bg-slate-200 text-slate-800"
-                                }`}
-                              >
-                                {startDateText}
-                              </span>
-                              <span
-                                className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                  theme === "dark"
-                                    ? "bg-slate-800/40 text-slate-100"
-                                    : "bg-slate-200 text-slate-800"
-                                }`}
-                              >
-                                {startTimeText}
-                              </span>
-                              <span>تا</span>
-                              {session.endAt ? (
-                                <>
-                                  <span
-                                    className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                      theme === "dark"
-                                        ? "bg-slate-800/40 text-slate-100"
-                                        : "bg-slate-200 text-slate-800"
-                                    }`}
-                                  >
-                                    {endDateText}
-                                  </span>
-                                  <span
-                                    className={`px-2 py-0.5 rounded-lg text-xs ltr ${
-                                      theme === "dark"
-                                        ? "bg-slate-800/40 text-slate-100"
-                                        : "bg-slate-200 text-slate-800"
-                                    }`}
-                                  >
-                                    {endTimeText}
-                                  </span>
-                                </>
-                              ) : (
-                                <span
-                                  className={`px-2 py-0.5 rounded-lg text-xs ${
-                                    theme === "dark"
-                                      ? "bg-slate-800/40 text-slate-100"
-                                      : "bg-slate-200 text-slate-800"
-                                  }`}
-                                >
-                                  اکنون
-                                </span>
-                              )}
-                            </div>
-                            <span
-                              className={`text-xs ${
-                                theme === "dark" ? "text-slate-400" : "text-black"
-                              }`}
-                            >
-                              مدت{" "}
-                              {session.state === "on"
-                                ? "روشن بودن"
-                                : "خاموش بودن"}
-                              :{" "}
-                              <span className="font-semibold">{durationText}</span>
-                            </span>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </aside>
-            )}
+              <LogsPanel theme={theme} sessions={powerSessions} now={now} />
+            </WithAccess>
         </section>
         </div>
-        <section
-          className={
-            theme === "dark"
-              ? "mt-4 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl px-4 py-4"
-              : "mt-4 rounded-2xl border border-slate-200 bg-white shadow-xl px-4 py-4"
-          }
-        >
-          {(role === "manager" || role === "admin") && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold">مدیریت کاربران</h2>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    تنظیم سطح دسترسی فقط توسط اکانت مدیریت امکان‌پذیر است.
-                  </p>
-                </div>
-                <div>
-                  {role === "manager" && (
-                    <button
-                      type="button"
-                      onClick={() => setUsersModalOpen(true)}
-                      className={
-                        theme === "dark"
-                          ? "rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600"
-                          : "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                      }
-                    >
-                      مدیریت پیشرفته کاربران
-                    </button>
-                  )}
-                </div>
-              </div>
-              {users.length === 0 ? (
-                <div
+        <WithAccess anyRoles={["admin", "manager"]} anyPerms={["canViewPdgs"]}>
+          <section
+            className={
+              theme === "dark"
+                ? "mt-4 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl px-4 py-4"
+                : "mt-4 rounded-2xl border border-slate-200 bg-white shadow-xl px-4 py-4"
+            }
+          >
+            <AdminPdgPanel
+              theme={theme}
+              pdgs={pdgs}
+              canEditChillers={canEditChillers}
+              onAddClick={() => setPdgModalOpen(true)}
+              onOpenPdg={handleOpenPdg}
+              onDeletePdg={handleDeletePdg}
+            />
+          </section>
+        </WithAccess>
+        <WithAccess anyRoles={["admin", "manager"]} anyPerms={["canViewUserActivity"]}>
+          <section
+            className={
+              theme === "dark"
+                ? "mt-4 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl px-4 py-4"
+                : "mt-4 rounded-2xl border border-slate-200 bg-white shadow-xl px-4 py-4"
+            }
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+              <h2 className="text-sm font-semibold">آخرین فعالیت کاربران</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  value={activityUserFilter}
+                  onChange={(e) => {
+                    setActivityUserFilter(e.target.value);
+                    setActivityLimit(50);
+                  }}
+                  placeholder="فیلتر نام کاربری"
                   className={
                     theme === "dark"
-                      ? "rounded-xl border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-500"
-                      : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
+                      ? "rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
                   }
-                >
-                  هیچ کاربری یافت نشد.
-                </div>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {users.map((u) => (
-                    <div
-                      key={u.username}
-                      className={
-                        theme === "dark"
-                          ? "rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 shadow"
-                          : "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow"
-                      }
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold">{u.username}</span>
-                          <span className="text-[11px] text-slate-400">
-                            نقش: {u.role === "manager" ? "مدیر" : u.role === "admin" ? "ادمین" : "بیننده"}
-                          </span>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold ${
-                            u.active
-                              ? "bg-emerald-500/15 text-emerald-400"
-                              : "bg-slate-700/40 text-slate-300"
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full bg-current" />
-                          {u.active ? "فعال" : "غیرفعال"}
-                        </span>
-                      </div>
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          disabled={!u.active}
-                          onClick={() => handleDeactivateUser(u)}
-                          className={
-                            u.active
-                              ? "rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white"
-                              : "rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 cursor-not-allowed"
-                          }
-                        >
-                          غیرفعال‌سازی
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-sm font-semibold">PDG ها</h2>
-              <p className="mt-1 text-[11px] text-slate-400">
-                با کلیک روی هر کارت، صفحه PDG در تب جدید باز می‌شود.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">
-                {pdgs.length} دستگاه
-              </span>
-              {canEditChillers && (
+                />
                 <button
                   type="button"
-                  onClick={() => setPdgModalOpen(true)}
-                  className={
-                    theme === "dark"
-                      ? "rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600"
-                      : "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                  }
-                >
-                  افزودن PDG
-                </button>
-              )}
-            </div>
-          </div>
-                {pdgs.length === 0 ? (
-            <div
-              className={
-                theme === "dark"
-                  ? "rounded-xl border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-500"
-                  : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
-              }
-            >
-              هیچ دستگاهی برای PDG تعریف نشده است.
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-              {pdgs.map((pdg) => (
-                <div
-                  key={pdg.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleOpenPdg(pdg)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleOpenPdg(pdg);
-                    }
+                  onClick={() => {
+                    setActivityUserFilter("");
+                    setActivityLimit(50);
                   }}
                   className={
                     theme === "dark"
-                      ? `group relative flex flex-col items-stretch rounded-2xl border px-4 py-3 text-left transition ${
-                          pdg.active
-                            ? "border-emerald-500/40 bg-slate-900/80 hover:bg-slate-900"
-                            : "border-slate-800 bg-slate-950/80 opacity-80 hover:bg-slate-900/70"
-                        }`
-                      : `group relative flex flex-col items-stretch rounded-2xl border px-4 py-3 text-left transition ${
-                          pdg.active
-                            ? "border-emerald-500/40 bg-white hover:bg-emerald-50"
-                            : "border-slate-200 bg-slate-50 opacity-80 hover:bg-slate-100"
-                        }`
+                      ? "rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
                   }
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 shadow-inner">
-                      <div className="h-7 w-5 rounded-md border border-slate-500 bg-slate-900 flex items-center justify-center text-[9px] font-semibold tracking-tight text-slate-200">
-                        PDG
-                      </div>
-                      <span className="absolute -bottom-1 h-1 w-6 rounded-full bg-slate-700/80" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-slate-50">
-                        {pdg.name || "بدون نام"}
-                      </span>
-                      <span className="text-[11px] text-slate-400 ltr">
-                        {pdg.ip}/pdg.index
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
-                        pdg.active
-                          ? "bg-emerald-500/10 text-emerald-300"
-                          : "bg-slate-800 text-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          pdg.active ? "bg-emerald-400" : "bg-slate-500"
-                        }`}
-                      />
-                      {pdg.active ? "فعال" : "غیرفعال"}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">
-                        باز کردن در تب جدید
-                      </span>
-                      {canEditChillers && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm("آیا از حذف این PDG اطمینان دارید؟")) {
-                              handleDeletePdg(pdg.id);
-                            }
-                          }}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  حذف فیلتر
+                </button>
+              </div>
             </div>
-          )}
-        </section>
+            {activityLogs.length === 0 ? (
+              <div
+                className={
+                  theme === "dark"
+                    ? "rounded-xl border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-500"
+                    : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
+                }
+              >
+                {activityLoading ? "در حال بارگذاری..." : "لاگی ثبت نشده است."}
+              </div>
+            ) : (
+              <>
+              <ul className="space-y-2">
+                {activityLogs.map((a) => {
+                const atText = new Date(a.at).toLocaleString("fa-IR");
+                const title =
+                  a.action === "user.create"
+                    ? "ایجاد کاربر"
+                    : a.action === "user.update"
+                      ? "بروزرسانی کاربر"
+                      : a.action === "user.deactivate"
+                        ? "غیرفعال‌سازی کاربر"
+                        : a.action === "user.delete"
+                          ? "حذف کاربر"
+                          : a.action === "auth.login"
+                            ? "ورود کاربران"
+                          : a.action === "chiller.create"
+                            ? "ایجاد پکیج"
+                            : a.action === "chiller.update"
+                              ? "بروزرسانی پکیج"
+                              : a.action === "chiller.delete"
+                                ? "حذف پکیج"
+                                : a.action === "settings.update_global"
+                                  ? "ویرایش تنظیمات عمومی"
+                                  : a.action === "settings.update_chiller"
+                                    ? "ویرایش تنظیمات پکیج"
+                                    : a.action;
+                const d = a.details as Record<string, unknown> | undefined;
+                const detailText =
+                  d && typeof d.target === "string"
+                    ? String(d.target)
+                    : d && typeof d.name === "string"
+                      ? String(d.name)
+                      : "";
+                return (
+                  <li
+                    key={a.id}
+                    className={
+                      theme === "dark"
+                        ? "rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs"
+                        : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                    }
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{title}</span>
+                        {detailText && <span className="text-slate-400">{detailText}</span>}
+                      </div>
+                      <span className="ltr text-slate-400">{atText}</span>
+                    </div>
+                    <div className="mt-1 text-slate-400">
+                      توسط <span className="font-semibold">{a.username}</span>
+                    </div>
+                  </li>
+                );
+                })}
+              </ul>
+              <div className="mt-3 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setActivityLimit((n) => Math.min(2000, n + 50))}
+                  disabled={activityLoading}
+                  className={
+                    theme === "dark"
+                      ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-100 disabled:opacity-50"
+                      : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800 disabled:opacity-50"
+                  }
+                >
+                  نمایش بیشتر
+                </button>
+              </div>
+              </>
+            )}
+          </section>
+        </WithAccess>
         {toast && toastVisible && (
           <div
             className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl text-sm sm:text-base shadow-2xl z-50 max-w-[90%] sm:max-w-xl text-center ${
@@ -1725,6 +1221,22 @@ export default function AdminPage() {
                     <span>تنظیم دما</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" checked={permViewChillers} onChange={(e) => setPermViewChillers(e.target.checked)} />
+                    <span>مشاهده لیست پکیج‌ها</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" checked={permViewPdgs} onChange={(e) => setPermViewPdgs(e.target.checked)} />
+                    <span>مشاهده PDG ها</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={permViewUserActivity}
+                      onChange={(e) => setPermViewUserActivity(e.target.checked)}
+                    />
+                    <span>آخرین فعالیت کاربران</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permAddPackage} onChange={(e) => setPermAddPackage(e.target.checked)} />
                     <span>افزودن پکیج + PDG</span>
                   </label>
@@ -1755,6 +1267,9 @@ export default function AdminPage() {
                             canAddPackage: permAddPackage,
                             canManageUsers: permManageUsers,
                             canViewLogs: permViewLogs,
+                            canViewChillers: permViewChillers,
+                            canViewPdgs: permViewPdgs,
+                            canViewUserActivity: permViewUserActivity,
                           },
                         };
                         if (!payload.username || !/^[\p{L}\p{N}._-]{3,}$/u.test(payload.username)) {
@@ -1841,6 +1356,9 @@ export default function AdminPage() {
                           setPermAddPackage(false);
                           setPermManageUsers(false);
                           setPermViewLogs(false);
+                          setPermViewChillers(false);
+                          setPermViewPdgs(false);
+                          setPermViewUserActivity(false);
                         }}
                         className={
                           theme === "dark"
@@ -1867,6 +1385,9 @@ export default function AdminPage() {
                         setPermAddPackage(false);
                         setPermManageUsers(false);
                         setPermViewLogs(false);
+                        setPermViewChillers(false);
+                        setPermViewPdgs(false);
+                        setPermViewUserActivity(false);
                         setFormError(null);
                       }}
                       className={
@@ -1884,6 +1405,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+                
                 <div className="flex flex-col gap-2">
                   <div className="text-xs text-slate-400 mb-1">کاربران</div>
                   <div className="flex items-center gap-2 mb-2">
@@ -1918,6 +1440,9 @@ export default function AdminPage() {
                               setPermAddPackage(!!u.permissions?.canAddPackage);
                               setPermManageUsers(!!u.permissions?.canManageUsers);
                               setPermViewLogs(!!u.permissions?.canViewLogs);
+                              setPermViewChillers(!!u.permissions?.canViewChillers);
+                              setPermViewPdgs(!!u.permissions?.canViewPdgs);
+                              setPermViewUserActivity(!!u.permissions?.canViewUserActivity);
                             }}
                             className={
                               theme === "dark"
@@ -1928,14 +1453,77 @@ export default function AdminPage() {
                             <div className="font-semibold">{u.username}</div>
                             <div className="text-[11px] text-slate-400">نقش: {u.role}</div>
                           </button>
-                          <span
-                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold ${
-                              u.active ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/40 text-slate-300"
-                            }`}
-                          >
-                            <span className="w-2 h-2 rounded-full bg-current" />
-                            {u.active ? "فعال" : "غیرفعال"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold ${
+                                u.active ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/40 text-slate-300"
+                              }`}
+                            >
+                              <span className="w-2 h-2 rounded-full bg-current" />
+                              {u.active ? "فعال" : "غیرفعال"}
+                            </span>
+                            {u.active ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeactivateUser(u)}
+                                className={
+                                  theme === "dark"
+                                    ? "rounded-lg bg-red-500 px-3 py-1 text-xs font-semibold text-white hover:bg-red-600"
+                                    : "rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                                }
+                              >
+                                غیرفعال
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const res = await fetch("/api/users", {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ username: u.username, active: true }),
+                                  });
+                                  if (res.ok) {
+                                    setUsers((prev) => prev.map((x) => (x.username === u.username ? { ...x, active: true } : x)));
+                                    showToast("اکانت فعال شد", "success");
+                                  } else {
+                                    showToast("خطا در فعال‌سازی کاربر", "error");
+                                  }
+                                }}
+                                className={
+                                  theme === "dark"
+                                    ? "rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                                    : "rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                                }
+                              >
+                                فعال
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm("آیا از حذف این کاربر اطمینان دارید؟")) return;
+                                const res = await fetch("/api/users", {
+                                  method: "DELETE",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ username: u.username }),
+                                });
+                                if (res.ok) {
+                                  setUsers((prev) => prev.filter((x) => x.username !== u.username));
+                                  showToast("کاربر حذف شد", "success");
+                                } else {
+                                  showToast("خطا در حذف کاربر", "error");
+                                }
+                              }}
+                              className={
+                                theme === "dark"
+                                  ? "rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                                  : "rounded-lg bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-300"
+                              }
+                            >
+                              حذف
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>

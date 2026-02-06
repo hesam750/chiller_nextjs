@@ -10,6 +10,13 @@ type PowerLog = {
   user?: string;
 };
 
+type ActivityLog = {
+  id: string;
+  username: string;
+  action: string;
+  at: string;
+  details?: Record<string, unknown>;
+};
 type UserRole = "admin" | "manager" | "viewer";
 
 type Permissions = {
@@ -20,6 +27,9 @@ type Permissions = {
   canAddPackage?: boolean;
   canManageUsers?: boolean;
   canViewLogs?: boolean;
+  canViewChillers?: boolean;
+  canViewPdgs?: boolean;
+  canViewUserActivity?: boolean;
 };
 
 type User = {
@@ -65,6 +75,7 @@ export type Settings = {
 
 type DbShape = {
   powerLogs: PowerLog[];
+  activityLogs: ActivityLog[];
   users: User[];
   chillers: Chiller[];
   timers: TimerItem[];
@@ -125,6 +136,7 @@ function readDb(): DbShape {
   if (!fs.existsSync(file)) {
     const initial: DbShape = {
       powerLogs: [],
+      activityLogs: [],
       users: [
         {
           username: "admin",
@@ -160,6 +172,22 @@ function readDb(): DbShape {
     const parsed = JSON.parse(raw) as Partial<DbShape>;
   const db: DbShape = {
       powerLogs: Array.isArray(parsed.powerLogs) ? parsed.powerLogs : [],
+      activityLogs: Array.isArray((parsed as { activityLogs?: unknown }).activityLogs)
+        ? ((parsed as { activityLogs?: unknown }).activityLogs as unknown[]).map((a) => {
+            const obj = (typeof a === "object" && a) ? (a as Record<string, unknown>) : {};
+            const det = obj.details;
+            return {
+              id: String(obj.id ?? ""),
+              username: String(obj.username ?? ""),
+              action: String(obj.action ?? ""),
+              at: String(obj.at ?? ""),
+              details:
+                det && typeof det === "object"
+                  ? (det as Record<string, unknown>)
+                  : undefined,
+            };
+          })
+        : [],
       users: Array.isArray(parsed.users)
         ? parsed.users.map((u) => ({
             username: String(u.username || ""),
@@ -200,6 +228,18 @@ function readDb(): DbShape {
                 u && u.permissions && typeof u.permissions.canViewLogs === "boolean"
                   ? u.permissions.canViewLogs
                   : undefined,
+              canViewChillers:
+                u && u.permissions && typeof (u.permissions as Record<string, unknown>).canViewChillers === "boolean"
+                  ? ((u.permissions as Record<string, unknown>).canViewChillers as boolean)
+                  : undefined,
+              canViewPdgs:
+                u && u.permissions && typeof (u.permissions as Record<string, unknown>).canViewPdgs === "boolean"
+                  ? ((u.permissions as Record<string, unknown>).canViewPdgs as boolean)
+                  : undefined,
+              canViewUserActivity:
+                u && u.permissions && typeof (u.permissions as Record<string, unknown>).canViewUserActivity === "boolean"
+                  ? ((u.permissions as Record<string, unknown>).canViewUserActivity as boolean)
+                  : undefined,
             },
           }))
         : [],
@@ -228,29 +268,22 @@ function readDb(): DbShape {
         : [],
       settings: {
         progressOnSeconds:
-          parsed.settings && typeof (parsed.settings as any).progressOnSeconds === "number"
-            ? Math.max(1, Math.round((parsed.settings as any).progressOnSeconds))
+          typeof parsed.settings?.progressOnSeconds === "number"
+            ? Math.max(1, Math.round(parsed.settings.progressOnSeconds))
             : 60,
         progressOffSeconds:
-          parsed.settings && typeof (parsed.settings as any).progressOffSeconds === "number"
-            ? Math.max(1, Math.round((parsed.settings as any).progressOffSeconds))
+          typeof parsed.settings?.progressOffSeconds === "number"
+            ? Math.max(1, Math.round(parsed.settings.progressOffSeconds))
             : 60,
         byChiller:
-          parsed.settings && parsed.settings && typeof (parsed.settings as any).byChiller === "object"
+          parsed.settings && typeof parsed.settings.byChiller === "object" && parsed.settings.byChiller
             ? Object.fromEntries(
-                Object.entries((parsed.settings as any).byChiller || {}).map(([k, v]) => [
-                  String(k),
-                  {
-                    progressOnSeconds:
-                      v && typeof (v as any).progressOnSeconds === "number"
-                        ? Math.max(1, Math.round((v as any).progressOnSeconds))
-                        : undefined,
-                    progressOffSeconds:
-                      v && typeof (v as any).progressOffSeconds === "number"
-                        ? Math.max(1, Math.round((v as any).progressOffSeconds))
-                        : undefined,
-                  },
-                ]),
+                Object.entries(parsed.settings.byChiller as Record<string, unknown>).map(([k, v]) => {
+                  const vv = (typeof v === "object" && v) ? (v as Record<string, unknown>) : {};
+                  const on = typeof vv.progressOnSeconds === "number" ? Math.max(1, Math.round(vv.progressOnSeconds)) : undefined;
+                  const off = typeof vv.progressOffSeconds === "number" ? Math.max(1, Math.round(vv.progressOffSeconds)) : undefined;
+                  return [String(k), { progressOnSeconds: on, progressOffSeconds: off }];
+                }),
               )
             : {},
       },
@@ -269,6 +302,9 @@ function readDb(): DbShape {
           canAddPackage: true,
           canManageUsers: false,
           canViewLogs: true,
+          canViewChillers: true,
+          canViewPdgs: true,
+          canViewUserActivity: true,
         },
       });
     }
@@ -286,6 +322,9 @@ function readDb(): DbShape {
           canAddPackage: false,
           canManageUsers: true,
           canViewLogs: true,
+          canViewChillers: true,
+          canViewPdgs: true,
+          canViewUserActivity: true,
         },
       });
     }
@@ -303,6 +342,9 @@ function readDb(): DbShape {
           canAddPackage: false,
           canManageUsers: false,
           canViewLogs: false,
+          canViewChillers: false,
+          canViewPdgs: false,
+          canViewUserActivity: false,
         },
       });
     }
@@ -354,11 +396,11 @@ function readDb(): DbShape {
         active: true,
       });
     }
-    writeDb(db);
     return db;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Prevent resetting the DB on transient errors like file locking (EBUSY)
-    if (error.code === "EBUSY" || error.code === "EPERM") {
+    const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
+    if (code === "EBUSY" || code === "EPERM") {
       console.error("Database busy, skipping read...");
       throw error;
     }
@@ -381,6 +423,7 @@ function readDb(): DbShape {
 
     const fallback: DbShape = {
       powerLogs: [],
+      activityLogs: [],
       users: [
         {
           username: "admin",
@@ -471,6 +514,36 @@ export function getPowerLogs(limit = 50): PowerLog[] {
     const t = new Date(p.at).getTime();
     return Number.isFinite(t) ? t >= cutoff : true;
   });
+  return list.slice(0, limit);
+}
+
+export function appendActivityLog(entry: ActivityLog) {
+  const db = readDb();
+  db.activityLogs.unshift(entry);
+  const now = Date.now();
+  const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+  db.activityLogs = db.activityLogs.filter((p) => {
+    const t = new Date(p.at).getTime();
+    return Number.isFinite(t) ? t >= cutoff : true;
+  });
+  if (db.activityLogs.length > 2000) {
+    db.activityLogs = db.activityLogs.slice(0, 2000);
+  }
+  writeDb(db);
+}
+
+export function getActivityLogs(limit = 100, forUser?: string): ActivityLog[] {
+  const db = readDb();
+  const now = Date.now();
+  const cutoff = now - 60 * 24 * 60 * 60 * 1000;
+  let list = db.activityLogs.filter((p) => {
+    const t = new Date(p.at).getTime();
+    return Number.isFinite(t) ? t >= cutoff : true;
+  });
+  if (forUser && forUser.trim().length) {
+    const name = forUser.trim();
+    list = list.filter((x) => x.username === name);
+  }
   return list.slice(0, limit);
 }
 

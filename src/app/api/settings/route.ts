@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth";
-import {
-  getSettings,
-  updateSettings,
-  getEffectiveProgressForChiller,
-  updateChillerProgress,
-} from "@/lib/db";
+import { getSettings, updateSettings, getEffectiveProgressForChiller, updateChillerProgress, appendActivityLog } from "@/lib/db";
+import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -37,22 +33,32 @@ export async function PUT(req: NextRequest) {
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
+  const b = body as Record<string, unknown>;
   const chillerId =
-    typeof (body as any).chillerId === "string" ? String((body as any).chillerId).trim() : "";
+    typeof b.chillerId === "string" ? String(b.chillerId).trim() : "";
   if (chillerId) {
     const progressOnSeconds =
-      typeof (body as any).progressOnSeconds === "number"
-        ? Math.max(1, Math.round((body as any).progressOnSeconds))
+      typeof b.progressOnSeconds === "number"
+        ? Math.max(1, Math.round(b.progressOnSeconds))
         : undefined;
     const progressOffSeconds =
-      typeof (body as any).progressOffSeconds === "number"
-        ? Math.max(1, Math.round((body as any).progressOffSeconds))
+      typeof b.progressOffSeconds === "number"
+        ? Math.max(1, Math.round(b.progressOffSeconds))
         : undefined;
-    const o = updateChillerProgress(chillerId, {
+    updateChillerProgress(chillerId, {
       progressOnSeconds,
       progressOffSeconds,
     });
     const e = getEffectiveProgressForChiller(chillerId);
+    if (session && typeof session.username === "string") {
+      appendActivityLog({
+        id: crypto.randomBytes(8).toString("hex"),
+        username: session.username,
+        action: "settings.update_chiller",
+        at: new Date().toISOString(),
+        details: { chillerId, progressOnSeconds, progressOffSeconds },
+      });
+    }
     return NextResponse.json({
       ok: true,
       item: {
@@ -62,13 +68,22 @@ export async function PUT(req: NextRequest) {
     });
   } else {
     const progressOnSeconds =
-      typeof (body as any).progressOnSeconds === "number" ? Math.max(1, Math.round((body as any).progressOnSeconds)) : undefined;
+      typeof b.progressOnSeconds === "number" ? Math.max(1, Math.round(b.progressOnSeconds)) : undefined;
     const progressOffSeconds =
-      typeof (body as any).progressOffSeconds === "number" ? Math.max(1, Math.round((body as any).progressOffSeconds)) : undefined;
+      typeof b.progressOffSeconds === "number" ? Math.max(1, Math.round(b.progressOffSeconds)) : undefined;
     const s = updateSettings({
       progressOnSeconds,
       progressOffSeconds,
     });
+    if (session && typeof session.username === "string") {
+      appendActivityLog({
+        id: crypto.randomBytes(8).toString("hex"),
+        username: session.username,
+        action: "settings.update_global",
+        at: new Date().toISOString(),
+        details: { progressOnSeconds, progressOffSeconds },
+      });
+    }
     return NextResponse.json({
       ok: true,
       item: {

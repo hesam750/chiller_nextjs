@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteChiller, updateChiller } from "@/lib/chillers";
 import { getSessionFromCookies } from "@/lib/auth";
-import { getUser } from "@/lib/db";
+import { getUser, appendActivityLog } from "@/lib/db";
+import crypto from "crypto";
 
 async function requireAddPackage() {
   const s = await getSessionFromCookies();
   if (!s || !s.username) return false;
+  if (s.role === "admin") return true;
   const u = getUser(s.username);
   if (!u) return false;
-  if (s.role === "admin" || s.role === "manager") return true;
   return !!(u.permissions && u.permissions.canAddPackage);
 }
 
@@ -36,6 +37,16 @@ export async function PUT(
   if (!item) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
+  const s = await getSessionFromCookies();
+  if (s && typeof s.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: s.username,
+      action: "chiller.update",
+      at: new Date().toISOString(),
+      details: { id, patch },
+    });
+  }
   return NextResponse.json({ ok: true, item });
 }
 
@@ -50,6 +61,16 @@ export async function DELETE(
   const removed = await deleteChiller(id);
   if (!removed) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  const s = await getSessionFromCookies();
+  if (s && typeof s.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: s.username,
+      action: "chiller.delete",
+      at: new Date().toISOString(),
+      details: { id },
+    });
   }
   return NextResponse.json({ ok: true, item: removed });
 }

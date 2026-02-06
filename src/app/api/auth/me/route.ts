@@ -18,6 +18,9 @@ export async function GET() {
         canAddPackage: !!u.permissions.canAddPackage,
         canManageUsers: !!u.permissions.canManageUsers,
         canViewLogs: !!u.permissions.canViewLogs,
+        canViewChillers: !!u.permissions.canViewChillers,
+        canViewPdgs: !!u.permissions.canViewPdgs,
+        canViewUserActivity: !!u.permissions.canViewUserActivity,
       };
     }
   }

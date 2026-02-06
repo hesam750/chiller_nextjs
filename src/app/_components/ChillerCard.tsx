@@ -786,19 +786,6 @@ export function ChillerCard({
                   خاموش
                 </button>
               </div>
-              <span
-                className={`text-[11px] font-medium ${
-                  powerOn
-                    ? isDark
-                      ? "text-emerald-300"
-                      : "text-emerald-700"
-                    : isDark
-                      ? "text-slate-400"
-                      : "text-zinc-500"
-                }`}
-              >
-                وضعیت: {powerOn ? "روشن" : "خاموش"}
-              </span>
             </div>
             <div
               className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 py-3"

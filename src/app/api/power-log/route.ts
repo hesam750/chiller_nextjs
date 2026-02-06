@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth";
-import { appendPowerLog, getPowerLogs, getUser } from "@/lib/db";
+import { appendPowerLog, getPowerLogs, getUser, appendActivityLog } from "@/lib/db";
 import crypto from "crypto";
 
 export async function GET() {
@@ -48,5 +48,14 @@ export async function POST(req: NextRequest) {
     at: new Date().toISOString(),
     user,
   });
+  if (user) {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: user,
+      action: "power.toggle",
+      at: new Date().toISOString(),
+      details: { unitName: body.unitName, action },
+    });
+  }
   return NextResponse.json({ ok: true });
 }

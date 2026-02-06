@@ -8,7 +8,8 @@ import {
 } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { getSessionFromCookies } from "@/lib/auth";
-import { getUser } from "@/lib/db";
+import { getUser, appendActivityLog } from "@/lib/db";
+import crypto from "crypto";
 
 type TimerItem = {
   id: string;
@@ -127,6 +128,15 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
   deactivateTimersForIp(chillerIp);
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "timer.deactivate",
+      at: new Date().toISOString(),
+      details: { chillerIp },
+    });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -173,6 +183,15 @@ export async function POST(req: NextRequest) {
     hours,
     targetAt: target,
   });
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "timer.add",
+      at: new Date().toISOString(),
+      details: { chillerIp: body.chillerIp, mode: body.mode, hours },
+    });
+  }
   return NextResponse.json({
     ok: true,
     item: {

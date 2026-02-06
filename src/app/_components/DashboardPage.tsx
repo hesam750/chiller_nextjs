@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WithAccess } from "@/app/_components/rbac";
 import { ChillerCard } from "./ChillerCard";
 import fanapLogo from "../../../fanap.png";
 
@@ -409,10 +410,14 @@ export function DashboardPage() {
                   : "bg-white hover:bg-zinc-200 text-zinc-800"
               }`}
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
-                <path d="M12 6l2 3 4 .5-3 2.5.8 3.9-3.8-1.8-3.8 1.8.8-3.9-3-2.5 4-.5 2-3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
-              </svg>
-              مدیریت
+              <WithAccess anyRoles={["admin", "manager"]}>
+                <>
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                    <path d="M12 6l2 3 4 .5-3 2.5.8 3.9-3.8-1.8-3.8 1.8.8-3.9-3-2.5 4-.5 2-3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
+                  </svg>
+                  مدیریت
+                </>
+              </WithAccess>
             </a>
             <button
               type="button"

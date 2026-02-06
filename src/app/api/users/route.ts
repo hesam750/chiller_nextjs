@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth";
-import { getUser, upsertUser, listUsers, deleteUser } from "@/lib/db";
+import { getUser, upsertUser, listUsers, deleteUser, appendActivityLog } from "@/lib/db";
 import crypto from "crypto";
 
 export async function GET() {
@@ -40,6 +40,15 @@ export async function PATCH(req: NextRequest) {
   }
   const updated = { ...user, active };
   upsertUser(updated);
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "user.deactivate",
+      at: new Date().toISOString(),
+      details: { target: updated.username },
+    });
+  }
   return NextResponse.json({
     ok: true,
     item: { username: updated.username, role: updated.role, active: updated.active },
@@ -74,6 +83,9 @@ export async function POST(req: NextRequest) {
           canAddPackage: !!body.permissions.canAddPackage,
           canManageUsers: !!body.permissions.canManageUsers,
           canViewLogs: !!body.permissions.canViewLogs,
+          canViewChillers: !!body.permissions.canViewChillers,
+          canViewPdgs: !!body.permissions.canViewPdgs,
+          canViewUserActivity: !!body.permissions.canViewUserActivity,
         }
       : undefined;
   const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
@@ -82,6 +94,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "conflict" }, { status: 409 });
   }
   upsertUser({ username, passwordHash, role, active, permissions });
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "user.create",
+      at: new Date().toISOString(),
+      details: { target: username, role, active },
+    });
+  }
   return NextResponse.json({
     ok: true,
     item: { username, role, active, permissions },
@@ -136,6 +157,18 @@ export async function PUT(req: NextRequest) {
             typeof body.permissions.canViewLogs === "boolean"
               ? body.permissions.canViewLogs
               : cur.permissions?.canViewLogs,
+          canViewChillers:
+            typeof body.permissions.canViewChillers === "boolean"
+              ? body.permissions.canViewChillers
+              : cur.permissions?.canViewChillers,
+          canViewPdgs:
+            typeof body.permissions.canViewPdgs === "boolean"
+              ? body.permissions.canViewPdgs
+              : cur.permissions?.canViewPdgs,
+          canViewUserActivity:
+            typeof body.permissions.canViewUserActivity === "boolean"
+              ? body.permissions.canViewUserActivity
+              : cur.permissions?.canViewUserActivity,
         }
       : cur.permissions;
   let nextPasswordHash = cur.passwordHash;
@@ -150,6 +183,15 @@ export async function PUT(req: NextRequest) {
     passwordHash: nextPasswordHash,
   };
   upsertUser(updated);
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "user.update",
+      at: new Date().toISOString(),
+      details: { target: updated.username, role: nextRole, active: nextActive },
+    });
+  }
   return NextResponse.json({
     ok: true,
     item: { username: updated.username, role: updated.role, active: updated.active, permissions: updated.permissions || undefined },
@@ -171,5 +213,14 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   deleteUser(username);
+  if (session && typeof session.username === "string") {
+    appendActivityLog({
+      id: crypto.randomBytes(8).toString("hex"),
+      username: session.username,
+      action: "user.delete",
+      at: new Date().toISOString(),
+      details: { target: username },
+    });
+  }
   return NextResponse.json({ ok: true });
 }
