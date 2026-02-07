@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { WithAccess } from "@/app/_components/rbac";
 import { ChillerCard } from "./ChillerCard";
 import fanapLogo from "../../../fanap.png";
+import { useI18n } from "./i18n";
 
 type Chiller = {
   id: string;
@@ -39,6 +40,7 @@ export function DashboardPage() {
   );
   const [introOpen, setIntroOpen] = useState(true);
   const [mePermissions, setMePermissions] = useState<Record<string, boolean> | null>(null);
+  const { t } = useI18n();
 
   
 
@@ -201,7 +203,7 @@ export function DashboardPage() {
   const handleTogglePower = async (payload: { name: string; ip: string; next: boolean }) => {
     const canControl = !!(mePermissions && mePermissions.canTogglePower);
     if (!canControl) {
-      showToast("شما دسترسی خاموش و روشن کردن این پکیج را ندارید", "error");
+      showToast(t("no.access.togglePower"), "error");
       return { ok: false };
     }
     const action = payload.next ? "on" : "off";
@@ -242,16 +244,16 @@ export function DashboardPage() {
       } catch {
       }
       if (payload.next) {
-        showToast("پکیج با موفقیت روشن شد", "success");
+        showToast(t("ok.power.on"), "success");
       } else {
-        showToast("پکیج با موفقیت خاموش شد", "success");
+        showToast(t("ok.power.off"), "success");
       }
     } else if (forbidden) {
-      showToast("اجازه اجرای این دستور را ندارید", "error");
+      showToast(t("err.forbidden"), "error");
     } else if (unreachable) {
-      showToast("ارتباط با پکیج برقرار نشد", "error");
+      showToast(t("err.unreachable"), "error");
     } else {
-      showToast("خطا در ارسال دستور به پکیج", "error");
+      showToast(t("err.power.send"), "error");
     }
 
     return { ok };
@@ -264,11 +266,11 @@ export function DashboardPage() {
   }) => {
     const canControl = !!(mePermissions && mePermissions.canSetTemperature);
     if (!canControl) {
-      showToast("شما دسترسی تنظیم دمای این پکیج را ندارید", "error");
+      showToast(t("no.access.setTemperature"), "error");
       return { ok: false };
     }
     if (!payload.ip) {
-      showToast("IP پکیج تنظیم نشده است", "error");
+      showToast(t("err.noIp"), "error");
       return { ok: false };
     }
     let ok = false;
@@ -307,13 +309,13 @@ export function DashboardPage() {
     }
 
     if (ok) {
-      showToast("دمای کامفورت با موفقیت اعمال شد", "success");
+      showToast(t("ok.setpoint"), "success");
     } else if (forbidden) {
-      showToast("اجازه تنظیم دمای این پکیج را ندارید", "error");
+      showToast(t("err.setpoint.forbidden"), "error");
     } else if (unreachable) {
-      showToast("ارتباط با پکیج برقرار نشد", "error");
+      showToast(t("err.setpoint.unreachable"), "error");
     } else {
-      showToast("خطا در ارسال تنظیم دما به پکیج", "error");
+      showToast(t("err.setpoint.send"), "error");
     }
 
     return { ok, actual };
@@ -337,12 +339,12 @@ export function DashboardPage() {
   return (
     <div
       className={`min-h-screen flex flex-col transition-colors ${
-        isDark ? "bg-[#0f141a] text-zinc-50" : "bg-zinc-50 text-zinc-900"
+        isDark ? "bg-[#0f141a] text-zinc-50" : "bg-[#f7f9fc] text-[#1f2937]"
       }`}
     >
       <header
         className={`border-b px-4 py-2 sm:px-6 sm:py-3 ${
-          isDark ? "border-zinc-800 bg-[#0f1722]" : "border-zinc-200 bg-white"
+          isDark ? "border-zinc-800 bg-[#0f1722]" : "border-[#e6edf7] bg-[#f9fafb]"
         }`}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -350,16 +352,16 @@ export function DashboardPage() {
             <div className="flex items-center gap-3 min-w-0">
               <img src={fanapLogo.src} alt="Fanap" className="h-6 w-auto shrink-0" />
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm sm:text-base truncate">سیستم سرمایشی فناپ تک</span>
+                <span className="font-bold text-sm sm:text:base truncate">{t("app.title")}</span>
                 <span className={`text-[11px] sm:text-xs truncate ${isDark ? "text-slate-400" : "text-zinc-500"}`}>
-                  کنترل و نظارت هوشمند پکیج‌ها
+                  {t("app.subtitle")}
                 </span>
               </div>
             </div>
           </div>
           <div
             className={`inline-flex items-center gap-2 px-2 py-2 rounded-2xl border ${
-              isDark ? "border-zinc-700 bg-white/5" : "border-zinc-300 bg-zinc-100"
+            isDark ? "border-zinc-700 bg-white/5" : "border-[#dbe5f1] bg-[#eef3fb]"
             }`}
           >
             <span
@@ -383,10 +385,10 @@ export function DashboardPage() {
                 } />
               </svg>
               {connection === "online"
-                ? "متصل"
+                ? t("connection.online")
                 : connection === "offline"
-                  ? "ارتباط قطع"
-                  : "در حال اتصال"}
+                  ? t("connection.offline")
+                  : t("connection.connecting")}
             </span>
             <button
               type="button"
@@ -394,20 +396,20 @@ export function DashboardPage() {
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
                   ? "bg-white/10 hover:bg-white/15 text-slate-100"
-                  : "bg-white hover:bg-zinc-200 text-zinc-800"
+                : "bg-[#ffffff] hover:bg-[#eef3fb] text-[#334155]"
               }`}
             >
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
                 <path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
               </svg>
-              {theme === "dark" ? "تاریک" : "روشن"}
+              {theme === "dark" ? t("theme.dark") : t("theme.light")}
             </button>
             <a
               href="/admin"
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
                   ? "bg-white/10 hover:bg-white/15 text-slate-100"
-                  : "bg-white hover:bg-zinc-200 text-zinc-800"
+                : "bg-[#ffffff] hover:bg-[#eef3fb] text-[#334155]"
               }`}
             >
               <WithAccess anyRoles={["admin", "manager"]}>
@@ -415,7 +417,7 @@ export function DashboardPage() {
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
                     <path d="M12 6l2 3 4 .5-3 2.5.8 3.9-3.8-1.8-3.8 1.8.8-3.9-3-2.5 4-.5 2-3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
                   </svg>
-                  مدیریت
+                  {t("admin.nav")}
                 </>
               </WithAccess>
             </a>
@@ -425,13 +427,13 @@ export function DashboardPage() {
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition ${
                 isDark
                   ? "bg-white/10 hover:bg-white/15 text-slate-100"
-                  : "bg-white hover:bg-zinc-200 text-zinc-800"
+                : "bg-[#ffffff] hover:bg-[#eef3fb] text-[#334155]"
               }`}
             >
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
                 <path d="M10 3h8a1 1 0 0 1 1 1v4h-2V5h-6v14h6v-3h2v4a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm4 8h-8v2h8v3l4-4-4-4v3z" className={isDark ? "fill-slate-200" : "fill-zinc-800"} />
               </svg>
-              خروج
+              {t("logout")}
             </button>
           </div>
         </div>
@@ -440,8 +442,8 @@ export function DashboardPage() {
       <main className="flex-1 px-4 py-4 lg:px-6 lg:py-6">
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold">پکیج‌ها</h1>
-            {loading && <span className="text-xs text-zinc-400">در حال بارگذاری...</span>}
+            <h1 className="text-lg font-semibold">{t("chillers")}</h1>
+            {loading && <span className="text-xs text-zinc-400">{t("loading.generic")}</span>}
           </div>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
             {chillers.map((c) => (
@@ -467,10 +469,10 @@ export function DashboardPage() {
                 className={`rounded-2xl border border-dashed p-6 text-sm flex items-center justify-center ${
                   isDark
                     ? "border-zinc-700/70 text-zinc-400"
-                    : "border-zinc-300 text-zinc-500 bg-white"
+                    : "border-[#e6edf7] text-[#66738a] bg-[#fbfcff]"
                 }`}
               >
-                هیچ پکیجی در تنظیمات تعریف نشده است.
+                {t("chillers.empty")}
               </div>
             )}
           </div>
@@ -483,7 +485,7 @@ export function DashboardPage() {
             className={`w-full max-w-md rounded-3xl border shadow-2xl px-6 py-5 flex flex-col items-center gap-4 ${
               isDark
                 ? "bg-[#020617] border-slate-700 text-slate-100"
-                : "bg-white border-slate-200 text-zinc-900"
+                : "bg-[#fbfcff] border-[#e6edf7] text-[#1f2937]"
             }`}
           >
             <div className="flex flex-col items-center gap-3">
@@ -491,12 +493,11 @@ export function DashboardPage() {
                 <div className="h-12 w-12 rounded-full border-4 border-sky-500/40 border-t-transparent animate-spin" />
                 <div className="absolute inset-1 rounded-full bg-sky-500/10" />
               </div>
-              <h2 className="text-base sm:text-lg font-semibold text-center">
-                در حال آماده‌سازی اطلاعات سیستم
+              <h2 className="text-base sm:text-lg font-semibold text:center">
+                {t("intro.title")}
               </h2>
               <p className="text-xs sm:text-sm leading-relaxed text-center max-w-sm">
-                تا آماده شدن اطلاعات پکیج‌ها ممکن است چندین ثانیه زمان نیاز باشد.
-                از صبوری و شکیبایی شما سپاسگزاریم.
+                {t("intro.text")}
               </p>
             </div>
             <button
@@ -508,7 +509,7 @@ export function DashboardPage() {
                   : "bg-sky-600 text-white hover:bg-sky-500"
               }`}
             >
-              متوجه شدم
+              {t("intro.ok")}
             </button>
           </div>
         </div>

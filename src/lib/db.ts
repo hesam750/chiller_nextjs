@@ -30,6 +30,7 @@ type Permissions = {
   canViewChillers?: boolean;
   canViewPdgs?: boolean;
   canViewUserActivity?: boolean;
+  canChangeLanguage?: boolean;
 };
 
 type User = {
@@ -113,11 +114,9 @@ function projectRootDir() {
 }
 
 function dbFilePath() {
-  const isVercel = process.env.VERCEL === "1" || process.env.VERCEL === "true";
   const override = process.env.CHILLER_DATA_DIR;
-  const base = isVercel
-    ? process.env.TMPDIR || "/tmp"
-    : override && override.trim().length
+  const base =
+    override && override.trim().length
       ? override
       : projectRootDir();
   const dataDir = path.join(base, "data");
@@ -240,6 +239,10 @@ function readDb(): DbShape {
                 u && u.permissions && typeof (u.permissions as Record<string, unknown>).canViewUserActivity === "boolean"
                   ? ((u.permissions as Record<string, unknown>).canViewUserActivity as boolean)
                   : undefined,
+              canChangeLanguage:
+                u && u.permissions && typeof (u.permissions as Record<string, unknown>).canChangeLanguage === "boolean"
+                  ? ((u.permissions as Record<string, unknown>).canChangeLanguage as boolean)
+                  : undefined,
             },
           }))
         : [],
@@ -288,114 +291,6 @@ function readDb(): DbShape {
             : {},
       },
     };
-    if (!db.users.find((u) => u.username === "admin")) {
-      db.users.push({
-        username: "admin",
-        passwordHash: hashPassword("admin@ch.fanap"),
-        role: "admin",
-        active: true,
-        permissions: {
-          canViewTimer: true,
-          canControlTimer: true,
-          canTogglePower: true,
-          canSetTemperature: true,
-          canAddPackage: true,
-          canManageUsers: false,
-          canViewLogs: true,
-          canViewChillers: true,
-          canViewPdgs: true,
-          canViewUserActivity: true,
-        },
-      });
-    }
-    if (!db.users.find((u) => u.username === "manager")) {
-      db.users.push({
-        username: "manager",
-        passwordHash: hashPassword("manager@ch.fanap"),
-        role: "manager",
-        active: true,
-        permissions: {
-          canViewTimer: true,
-          canControlTimer: true,
-          canTogglePower: true,
-          canSetTemperature: true,
-          canAddPackage: false,
-          canManageUsers: true,
-          canViewLogs: true,
-          canViewChillers: true,
-          canViewPdgs: true,
-          canViewUserActivity: true,
-        },
-      });
-    }
-    if (!db.users.find((u) => u.username === "viewer")) {
-      db.users.push({
-        username: "viewer",
-        passwordHash: hashPassword("viewer@ch.fanap"),
-        role: "viewer",
-        active: true,
-        permissions: {
-          canViewTimer: true,
-          canControlTimer: false,
-          canTogglePower: false,
-          canSetTemperature: false,
-          canAddPackage: false,
-          canManageUsers: false,
-          canViewLogs: false,
-          canViewChillers: false,
-          canViewPdgs: false,
-          canViewUserActivity: false,
-        },
-      });
-    }
-    if (!db.users.find((u) => u.username === "حمیدرضا سعدی")) {
-      db.users.push({
-        username: "حمیدرضا سعدی",
-        passwordHash: hashPassword("manager@ch.fanap"),
-        role: "manager",
-        active: true,
-      });
-    }
-    if (!db.users.find((u) => u.username === "حسین کارجو")) {
-      db.users.push({
-        username: "حسین کارجو",
-        passwordHash: hashPassword("admin@ch.fanap"),
-        role: "admin",
-        active: true,
-      });
-    }
-    if (!db.users.find((u) => u.username === "ابراهیم رضایی")) {
-      db.users.push({
-        username: "ابراهیم رضایی",
-        passwordHash: hashPassword("admin@ch.fanap"),
-        role: "admin",
-        active: true,
-      });
-    }
-    if (!db.users.find((u) => u.username === "محمد بیننده")) {
-      db.users.push({
-        username: "محمد بیننده",
-        passwordHash: hashPassword("viewer@ch.fanap"),
-        role: "viewer",
-        active: true,
-      });
-    }
-    if (!db.users.find((u) => u.username === "سید طاهر محمدی")) {
-      db.users.push({
-        username: "سید طاهر محمدی",
-        passwordHash: hashPassword("viewer@ch.fanap"),
-        role: "viewer",
-        active: true,
-      });
-    }
-    if (!db.users.find((u) => u.username === "محمدعلی رضایی")) {
-      db.users.push({
-        username: "محمدعلی رضایی",
-        passwordHash: hashPassword("viewer@ch.fanap"),
-        role: "viewer",
-        active: true,
-      });
-    }
     return db;
   } catch (error: unknown) {
     // Prevent resetting the DB on transient errors like file locking (EBUSY)
@@ -486,8 +381,52 @@ function readDb(): DbShape {
 
 function writeDb(data: DbShape) {
   const file = dbFilePath();
+  let merged: DbShape = data;
+  try {
+    if (fs.existsSync(file)) {
+      const raw = fs.readFileSync(file, "utf8");
+      const cur = JSON.parse(raw) as Partial<DbShape>;
+      merged = {
+        powerLogs: Array.isArray(data.powerLogs)
+          ? data.powerLogs
+          : Array.isArray(cur.powerLogs)
+            ? cur.powerLogs as PowerLog[]
+            : [],
+        activityLogs: Array.isArray(data.activityLogs)
+          ? data.activityLogs
+          : Array.isArray((cur as { activityLogs?: unknown }).activityLogs)
+            ? ((cur as { activityLogs?: unknown }).activityLogs as ActivityLog[])
+            : [],
+        users: Array.isArray(data.users)
+          ? data.users
+          : Array.isArray(cur.users)
+            ? cur.users as User[]
+            : [],
+        chillers: Array.isArray(data.chillers)
+          ? data.chillers
+          : Array.isArray(cur.chillers)
+            ? cur.chillers as Chiller[]
+            : [],
+        timers: Array.isArray(data.timers)
+          ? data.timers
+          : Array.isArray(cur.timers)
+            ? cur.timers as TimerItem[]
+            : [],
+        settings: data.settings ?? cur.settings ?? { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
+      };
+    }
+  } catch {
+    merged = {
+      powerLogs: Array.isArray(data.powerLogs) ? data.powerLogs : [],
+      activityLogs: Array.isArray(data.activityLogs) ? data.activityLogs : [],
+      users: Array.isArray(data.users) ? data.users : [],
+      chillers: Array.isArray(data.chillers) ? data.chillers : [],
+      timers: Array.isArray(data.timers) ? data.timers : [],
+      settings: data.settings ?? { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
+    };
+  }
   const tmp = file + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
+  fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), "utf8");
   fs.renameSync(tmp, file);
 }
 
@@ -653,6 +592,37 @@ export function deactivateChiller(id: string): Chiller | null {
   db.chillers[idx] = updated;
   writeDb(db);
   return updated;
+}
+
+export function removeChiller(id: string): Chiller | null {
+  const db = readDb();
+  const idx = db.chillers.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const removed = db.chillers[idx];
+  db.chillers = db.chillers.filter((c) => c.id !== id);
+  // cleanup timers by IP
+  db.timers = db.timers.filter((t) => t.chillerIp !== removed.ip);
+  // cleanup per-chiller settings
+  if (db.settings && db.settings.byChiller) {
+    delete db.settings.byChiller[id];
+  }
+  writeDb(db);
+  return removed;
+}
+
+export function resetDbKeepUsers(usernames: string[]) {
+  const db = readDb();
+  const keepSet = new Set(usernames.map((u) => String(u).trim()));
+  const keepUsers = db.users.filter((u) => keepSet.has(u.username));
+  const next: DbShape = {
+    powerLogs: [],
+    activityLogs: [],
+    users: keepUsers,
+    chillers: [],
+    timers: [],
+    settings: { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
+  };
+  writeDb(next);
 }
 
 export function findActiveTimer(chillerIp: string): TimerItem | null {

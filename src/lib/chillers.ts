@@ -6,7 +6,7 @@ import {
   upsertChiller,
   createChiller as createChillerDb,
   updateChiller as updateChillerDb,
-  deactivateChiller,
+  removeChiller,
 } from "@/lib/db";
 
 export type Chiller = {
@@ -128,7 +128,7 @@ export async function updateChiller(
 }
 
 export async function deleteChiller(id: string): Promise<Chiller | null> {
-  const updated = deactivateChiller(id);
+  const updated = removeChiller(id);
   if (!updated) return null;
   return {
     id: updated.id,

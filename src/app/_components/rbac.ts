@@ -14,11 +14,14 @@ export function canAccess(args: {
 }) {
   const r = args.role;
   const perms = args.permissions || null;
-  const roleOk = Array.isArray(args.anyRoles) ? args.anyRoles.includes(r) : false;
-  const permOk = Array.isArray(args.anyPerms)
-    ? args.anyPerms.some((k) => !!(perms && (perms as Record<string, boolean>)[k]))
-    : false;
-  return roleOk || permOk;
+  const hasRoleCond = Array.isArray(args.anyRoles) && args.anyRoles.length > 0;
+  const hasPermCond = Array.isArray(args.anyPerms) && args.anyPerms.length > 0;
+  if (!hasRoleCond && !hasPermCond) return false;
+  const roleOk = hasRoleCond ? args.anyRoles!.includes(r) : true;
+  const permOk = hasPermCond
+    ? args.anyPerms!.some((k) => !!(perms && (perms as Record<string, boolean>)[k]))
+    : true;
+  return roleOk && permOk;
 }
 
 type Me = {

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import { PwaClient } from "./_components/PwaClient";
+import { cookies } from "next/headers";
+import { I18nProvider } from "./_components/i18n";
+import { LanguageSwitcher } from "./_components/LanguageSwitcher";
 
 const vazirmatn = Vazirmatn({
   subsets: ["arabic"],
@@ -29,15 +32,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const store = await cookies();
+  const langCookie = store.get("lang")?.value;
+  const initialLocale = langCookie === "ar" || langCookie === "en" ? (langCookie as "ar" | "en") : "fa";
+  const dir = initialLocale === "en" ? "ltr" : "rtl";
   return (
-    <html lang="fa" dir="rtl">
+    <html lang={initialLocale} dir={dir}>
       <body className={`antialiased ${vazirmatn.className}`}>
-        {children}
+        <I18nProvider initialLocale={initialLocale}>
+          <LanguageSwitcher />
+          {children}
+        </I18nProvider>
         <PwaClient />
       </body>
     </html>

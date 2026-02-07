@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n } from "@/app/_components/i18n";
 
 type PdgItem = {
   id: string;
@@ -25,17 +26,18 @@ export function AdminPdgPanel({
   onOpenPdg,
   onDeletePdg,
 }: Props) {
+  const { t } = useI18n();
   return (
     <>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-sm font-semibold">PDG ها</h2>
-          <p className="mt-1 text-[11px] text-slate-400">
-            با کلیک روی هر کارت، صفحه PDG در تب جدید باز می‌شود.
-          </p>
+          <h2 className="text-sm font-semibold">{t("pdg.list")}</h2>
+          <p className="mt-1 text-[11px] text-slate-400">{t("pdg.help")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400">{pdgs.length} دستگاه</span>
+          <span className="text-[11px] text-slate-400">
+            {pdgs.length} {t("pdg.device")}
+          </span>
           {canEditChillers && (
             <button
               type="button"
@@ -46,7 +48,7 @@ export function AdminPdgPanel({
                   : "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
               }
             >
-              افزودن PDG
+              {t("pdg.add")}
             </button>
           )}
         </div>
@@ -57,10 +59,10 @@ export function AdminPdgPanel({
           className={
             theme === "dark"
               ? "rounded-xl border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-500"
-              : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
+                : "rounded-xl border border-dashed border-[#e6edf7] px-4 py-6 text-center text-xs text-slate-500 bg-[#fbfcff]"
           }
         >
-          هیچ دستگاهی برای PDG تعریف نشده است.
+          {t("pdg.empty")}
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
@@ -85,8 +87,8 @@ export function AdminPdgPanel({
                     }`
                   : `group relative flex flex-col items-stretch rounded-2xl border px-4 py-3 text-left transition ${
                       pdg.active
-                        ? "border-emerald-500/40 bg-white hover:bg-emerald-50"
-                        : "border-slate-200 bg-slate-50 opacity-80 hover:bg-slate-100"
+                        ? "border-[#e6edf7] bg-[#fbfcff] hover:bg-[#eef6ff]"
+                        : "border-[#e6edf7] bg-[#f4f7fb] opacity-80 hover:bg-[#eaf1fb]"
                     }`
               }
             >
@@ -99,7 +101,7 @@ export function AdminPdgPanel({
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-slate-50">
-                    {pdg.name || "بدون نام"}
+                    {pdg.name || t("no.name")}
                   </span>
                   <span className="text-[11px] text-slate-400 ltr">
                     {pdg.ip}/pdg.index
@@ -113,16 +115,16 @@ export function AdminPdgPanel({
                   }`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full ${pdg.active ? "bg-emerald-400" : "bg-slate-500"}`} />
-                  {pdg.active ? "فعال" : "غیرفعال"}
+                  {pdg.active ? t("status.active") : t("status.inactive")}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-400 group-hover:text-blue-300">باز کردن در تب جدید</span>
+                  <span className="text-blue-400 group-hover:text-blue-300">{t("open.newtab")}</span>
                   {canEditChillers && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm("آیا از حذف این PDG اطمینان دارید؟")) {
+                        if (confirm(t("pdg.confirm.delete"))) {
                           onDeletePdg(pdg.id);
                         }
                       }}

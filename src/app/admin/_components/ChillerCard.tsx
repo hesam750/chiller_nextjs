@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n } from "@/app/_components/i18n";
 
 type Chiller = {
   id: string;
@@ -34,6 +35,7 @@ export function ChillerCard({
   onDelete,
   onSaveProgress,
 }: Props) {
+  const { t } = useI18n();
   const pOn = progress?.progressOnSeconds ?? progressDefaultOn;
   const pOff = progress?.progressOffSeconds ?? progressDefaultOff;
   return (
@@ -43,8 +45,8 @@ export function ChillerCard({
           ? `rounded-2xl border bg-slate-950 px-4 py-3 shadow-lg ${
               chiller.active ? "border-emerald-500/40" : "border-slate-800 opacity-80"
             }`
-          : `rounded-2xl border bg-white px-4 py-3 shadow-lg ${
-              chiller.active ? "border-emerald-500/40" : "border-slate-200 opacity-80"
+          : `rounded-2xl border bg-[#fbfcff] px-4 py-3 shadow-lg ${
+              chiller.active ? "border-emerald-500/40" : "border-[#e6edf7] opacity-80"
             }`
       }
     >
@@ -59,7 +61,7 @@ export function ChillerCard({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-current" />
-          {chiller.active ? "فعال" : "غیرفعال"}
+          {chiller.active ? t("status.active") : t("status.inactive")}
         </span>
       </div>
       <div className="space-y-2 mt-2">
@@ -67,7 +69,7 @@ export function ChillerCard({
           className={
             theme === "dark"
               ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-              : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
+              : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-1.5 text-xs text-[#334155]"
           }
           value={chiller.name}
           readOnly={!canEditChillers}
@@ -77,14 +79,14 @@ export function ChillerCard({
           className={
             theme === "dark"
               ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs ltr text-slate-100"
-              : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs ltr text-slate-900"
+              : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-1.5 text-xs ltr text-[#334155]"
           }
           value={chiller.ip}
           readOnly={!canEditChillers}
           onChange={(e) => onChangeChiller(chiller.id, { ip: e.target.value })}
         />
         <label className="flex items-center gap-2 text-xs text-slate-400">
-          <span>فعال</span>
+          <span>{t("status.active")}</span>
           <input
             type="checkbox"
             checked={chiller.active}
@@ -94,14 +96,14 @@ export function ChillerCard({
         </label>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">زمان روشن شدن (ثانیه)</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t("progress.on")}</label>
             <input
               type="number"
               min={1}
               className={
                 theme === "dark"
                   ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
+              : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-1.5 text-xs text-[#334155]"
               }
               value={pOn}
               readOnly={!canEditChillers}
@@ -114,14 +116,14 @@ export function ChillerCard({
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">زمان خاموش شدن (ثانیه)</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t("progress.off")}</label>
             <input
               type="number"
               min={1}
               className={
                 theme === "dark"
                   ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100"
-                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900"
+              : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-1.5 text-xs text-[#334155]"
               }
               value={pOff}
               readOnly={!canEditChillers}
@@ -141,7 +143,7 @@ export function ChillerCard({
             disabled={!canEditChillers}
             className="flex-1 rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            ذخیره
+            {t("save")}
           </button>
           <button
             type="button"
@@ -149,7 +151,7 @@ export function ChillerCard({
             disabled={!canEditChillers}
             className="flex-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            حذف
+            {t("delete")}
           </button>
           <button
             type="button"
@@ -157,7 +159,7 @@ export function ChillerCard({
             disabled={!canEditChillers}
             className="flex-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            ذخیره زمان پروگرس
+            {t("progress.save")}
           </button>
         </div>
       </div>

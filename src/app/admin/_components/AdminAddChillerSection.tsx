@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n } from "@/app/_components/i18n";
 
 type Props = {
   theme: "dark" | "light";
@@ -27,47 +28,48 @@ export function AdminAddChillerSection({
   onAdd,
   onReload,
 }: Props) {
+  const { t } = useI18n();
   return (
     <section
       className={
         theme === "dark"
           ? "lg:col-span-12 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl"
-          : "lg:col-span-12 rounded-2xl border border-slate-200 bg-white shadow-xl"
+          : "lg:col-span-12 rounded-2xl border border-[#e6edf7] bg-[#fbfcff] shadow-xl"
       }
     >
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <div className="text-sm font-semibold">افزودن پکیج</div>
+        <div className="text-sm font-semibold">{t("chillers.add")}</div>
       </div>
       <div className="px-4 py-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-[1.2fr,1.2fr,auto,auto] items-end">
+        <div className="grid gap-3 md-grid-1_1_auto_auto items-end">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">نام</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t("name")}</label>
             <input
               className={
                 theme === "dark"
                   ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+                  : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-2 text-sm text-[#334155]"
               }
-              placeholder="مثلاً پکیج ۱"
+              placeholder={t("chiller.name.placeholder")}
               value={name}
               onChange={(e) => onChangeName(e.target.value)}
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">آدرس IP</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t("ip.address")}</label>
             <input
               className={
                 theme === "dark"
                   ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm ltr text-left text-slate-100"
-                  : "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm ltr text-left text-slate-900"
+                  : "w-full rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-2 text-sm ltr text-left text-[#334155]"
               }
-              placeholder="مثلاً 192.168.1.10"
+              placeholder={t("ip.placeholder")}
               value={ip}
               onChange={(e) => onChangeIp(e.target.value)}
             />
           </div>
           <label className="flex items-center gap-2 text-xs text-slate-400">
-            <span>فعال</span>
+            <span>{t("status.active")}</span>
             <input
               type="checkbox"
               checked={active}
@@ -85,9 +87,9 @@ export function AdminAddChillerSection({
                   : "rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
               }
             >
-              افزودن پکیج
+              {t("chillers.add")}
             </button>
-            <button
+            {/* <button
               type="button"
               onClick={onReload}
               className={
@@ -97,7 +99,7 @@ export function AdminAddChillerSection({
               }
             >
               تازه‌سازی لیست
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="text-xs text-slate-400 min-h-[20px]">{msg}</div>

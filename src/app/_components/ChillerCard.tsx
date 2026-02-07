@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import jalaali from "jalaali-js";
+import { useI18n } from "./i18n";
 
 type Props = {
   name: string;
@@ -20,15 +21,18 @@ type Props = {
 };
 
 const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 
-function toPersianNumber(value: number | string) {
+function toLocalizedNumber(value: number | string, locale: "fa" | "ar" | "en") {
   const s = String(value);
   let out = "";
   for (let i = 0; i < s.length; i += 1) {
     const ch = s[i];
     const code = ch.charCodeAt(0);
     if (code >= 48 && code <= 57) {
-      out += persianDigits[code - 48];
+      if (locale === "fa") out += persianDigits[code - 48];
+      else if (locale === "ar") out += arabicDigits[code - 48];
+      else out += ch;
     } else {
       out += ch;
     }
@@ -54,29 +58,21 @@ function jalaaliMonthLength(jy: number, jm: number) {
   return jalaali.jalaaliMonthLength(jy, jm);
 }
 
-const jalaliWeekdaysShort = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const jalaliWeekdaysShortFa = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const jalaliWeekdaysShortAr = ["س", "أ", "إ", "ث", "خ", "ج", "س"];
+const jalaliWeekdaysShortEn = ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"];
 
-const jalaliMonthNames = [
-  "فروردین",
-  "اردیبهشت",
-  "خرداد",
-  "تیر",
-  "مرداد",
-  "شهریور",
-  "مهر",
-  "آبان",
-  "آذر",
-  "دی",
-  "بهمن",
-  "اسفند",
-];
+const jalaliMonthNamesFa = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+const jalaliMonthNamesAr = ["فروردين","أرديبهشت","خرداد","تير","مرداد","شهريور","مهر","آبان","آذر","دي","بهمن","اسفند"];
+const jalaliMonthNamesEn = ["Farvardin","Ordibehesht","Khordad","Tir","Mordad","Shahrivar","Mehr","Aban","Azar","Dey","Bahman","Esfand"];
 
-function formatForwardUnits(totalSeconds: number) {
+function formatForwardUnits(totalSeconds: number, locale: "fa" | "ar" | "en") {
   const s = totalSeconds % 60;
   const m = Math.floor(totalSeconds / 60) % 60;
   const h = Math.floor(totalSeconds / 3600) % 24;
   const d = Math.floor(totalSeconds / 86400);
-  return `${toPersianNumber(s)} ثانیه ${toPersianNumber(m)} دقیقه ${toPersianNumber(h)} ساعت ${toPersianNumber(d)} روز`;
+  const words = locale === "fa" ? { sec: "ثانیه", min: "دقیقه", hour: "ساعت", day: "روز" } : locale === "ar" ? { sec: "ثانية", min: "دقيقة", hour: "ساعة", day: "يوم" } : { sec: "sec", min: "min", hour: "hour", day: "day" };
+  return `${toLocalizedNumber(s, locale)} ${words.sec} ${toLocalizedNumber(m, locale)} ${words.min} ${toLocalizedNumber(h, locale)} ${words.hour} ${toLocalizedNumber(d, locale)} ${words.day}`;
 }
 
 export function ChillerCard({
@@ -90,6 +86,7 @@ export function ChillerCard({
   onTogglePower,
   onApplySetpoint,
 }: Props) {
+  const { t, locale } = useI18n();
   const [powerOn, setPowerOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -167,10 +164,12 @@ export function ChillerCard({
   );
 
   const isDark = mode === "dark";
+  const weekdaysShort = locale === "fa" ? jalaliWeekdaysShortFa : locale === "ar" ? jalaliWeekdaysShortAr : jalaliWeekdaysShortEn;
+  const monthNames = locale === "fa" ? jalaliMonthNamesFa : locale === "ar" ? jalaliMonthNamesAr : jalaliMonthNamesEn;
 
   const remainingMs = timerTarget ? Math.max(0, timerTarget - timerNow) : 0;
   const remainingTotalSeconds = Math.floor(remainingMs / 1000);
-  const remainingForward = formatForwardUnits(remainingTotalSeconds);
+  const remainingForward = formatForwardUnits(remainingTotalSeconds, locale);
 
   const spMin = 10;
   const spMax = 30;
@@ -534,8 +533,8 @@ export function ChillerCard({
     const hh = String(hours).padStart(2, "0");
     const mm = String(minutes).padStart(2, "0");
     const ss = String(secs).padStart(2, "0");
-    const prefix = days > 0 ? `${toPersianNumber(days)} روز ` : "";
-    const clock = `${toPersianNumber(hh)}:${toPersianNumber(mm)}:${toPersianNumber(ss)}`;
+    const prefix = days > 0 ? `${toLocalizedNumber(days, locale)} ${t("time.day")} ` : "";
+    const clock = `${toLocalizedNumber(hh, locale)}:${toLocalizedNumber(mm, locale)}:${toLocalizedNumber(ss, locale)}`;
     return prefix + clock;
   }
 
@@ -598,7 +597,7 @@ export function ChillerCard({
         className={`relative flex flex-col w-full h-full rounded-[20px] overflow-hidden ${
           isDark
             ? "border border-[#1b2335] bg-[#07101f] text-slate-50 shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
-            : "border border-zinc-200 bg-white text-zinc-900 shadow-[0_14px_40px_rgba(15,23,42,0.12)]"
+            : "border border-[#e6edf7] bg-[#fbfcff] text-[#1f2937] shadow-[0_14px_40px_rgba(15,23,42,0.12)]"
         }`}
         style={{ backfaceVisibility: "hidden" }}
       >
@@ -609,13 +608,13 @@ export function ChillerCard({
           </div>
           <span
             className={`text-[11px] ${
-              isDark ? "text-slate-300" : "text-zinc-700"
+              isDark ? "text-slate-300" : "text-[#334155]"
             }`}
           >
             {uptimeState === "on"
-              ? `روشن: ${formatUptime(uptimeSeconds)}`
+              ? `${t("uptime.onPrefix")} ${formatUptime(uptimeSeconds)}`
               : uptimeState === "off"
-                ? `خاموش: ${formatUptime(uptimeSeconds)}`
+                ? `${t("uptime.offPrefix")} ${formatUptime(uptimeSeconds)}`
                 : "-"}
           </span>
         </div>
@@ -697,7 +696,7 @@ export function ChillerCard({
         >
           <div className="flex flex-col gap-0.5 text-sm">
             <span className={isDark ? "text-slate-300" : "text-zinc-700"}>
-              تنظیم تایمر
+              {t("timer.header")}
             </span>
             <span
               className={`text-[10px] sm:text-xs ${
@@ -705,8 +704,8 @@ export function ChillerCard({
               } ${timerTarget && timerMode ? "font-mono ltr" : "font-medium"}`}
             >
               {timerTarget && timerMode
-                ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingForward}`
-                : "بدون تایمر فعال"}
+                ? `${timerMode === "on" ? t("timer.until.on") : t("timer.until.off")} ${remainingForward}`
+                : t("timer.noneActive")}
             </span>
           </div>
           <button
@@ -719,7 +718,7 @@ export function ChillerCard({
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            تنظیم
+            {t("timer.open")}
           </button>
         </div>
       </div>
@@ -765,7 +764,7 @@ export function ChillerCard({
                       : "cursor-pointer"
                   }`}
                 >
-                  روشن
+                  {t("toggle.on")}
                 </button>
                 <button
                   type="button"
@@ -783,7 +782,7 @@ export function ChillerCard({
                       : "cursor-pointer"
                   }`}
                 >
-                  خاموش
+                  {t("toggle.off")}
                 </button>
               </div>
             </div>
@@ -806,15 +805,16 @@ export function ChillerCard({
                     isDark ? "text-slate-100" : "text-zinc-800"
                   }`}
                 >
-                  {toPersianNumber(
+                  {toLocalizedNumber(
                     Math.max(
                       0,
                       (startingMode === "off"
                         ? Math.max(1, Math.round(progressOffSeconds || 60))
                         : Math.max(1, Math.round(progressOnSeconds || 60))) - startingSeconds,
                     ),
+                    locale,
                   )}{" "}
-                  <span className="text-xs font-sans font-normal opacity-70">ثانیه</span>
+                  <span className="text-xs font-sans font-normal opacity-70">{t("time.second")}</span>
                 </div>
               </div>
               <span
@@ -828,7 +828,7 @@ export function ChillerCard({
                       : "bg-emerald-50 text-emerald-700 border border-emerald-400/70"
                 }`}
               >
-                {startingMode === "off" ? "در حال خاموش شدن..." : "در حال روشن شدن..."}
+                {startingMode === "off" ? t("starting.off") : t("starting.on")}
               </span>
             </div>
           </div>
@@ -846,10 +846,8 @@ export function ChillerCard({
           >
             <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-base font-semibold">تنظیم تایمر پکیج</span>
-              <span className="text-xs text-slate-400">
-                  تعیین کن چه زمانی پکیج به‌صورت خودکار روشن یا خاموش شود
-                </span>
+              <span className="text-base font-semibold">{t("timer.modal.title")}</span>
+              <span className="text-xs text-slate-400">{t("timer.modal.desc")}</span>
               </div>
               <button
                 dir="rtl"
@@ -863,7 +861,7 @@ export function ChillerCard({
             <div className="px-5 py-4 space-y-4">
               <div className="flex items-center justify-between text-xs">
                 <span className={isDark ? "text-slate-300" : "text-zinc-700"}>
-                  وضعیت فعلی:{" "}
+                  {t("timer.status.current")}{" "}
                   <span
                     className={
                       powerOn
@@ -873,7 +871,7 @@ export function ChillerCard({
                         : "text-red-500"
                     }
                   >
-                    {powerOn ? "روشن" : "خاموش"}
+                    {powerOn ? t("toggle.on") : t("toggle.off")}
                   </span>
                 </span>
                 <span
@@ -882,8 +880,8 @@ export function ChillerCard({
                   }`}
                 >
                   {timerTarget && timerMode
-                    ? `${timerMode === "on" ? "روشن در" : "خاموش در"} ${remainingForward}`
-                    : "بدون زمان‌بندی فعال"}
+                    ? `${timerMode === "on" ? t("timer.until.on") : t("timer.until.off")} ${remainingForward}`
+                    : t("timer.noneActive")}
                 </span>
               </div>
 
@@ -895,7 +893,7 @@ export function ChillerCard({
                 }`}
               >
                 <span className={isDark ? "text-slate-300" : "text-zinc-700"}>
-                  نوع عمل
+                  {t("timer.mode.label")}
                 </span>
                 <div
                   className={`inline-flex items-center rounded-full text-xs border ${
@@ -915,7 +913,7 @@ export function ChillerCard({
                           : "text-zinc-700"
                     }`}
                   >
-                    روشن شود
+                    {t("timer.mode.on")}
                   </button>
                   <button
                     type="button"
@@ -928,7 +926,7 @@ export function ChillerCard({
                           : "text-zinc-700"
                     }`}
                   >
-                    خاموش شود
+                    {t("timer.mode.off")}
                   </button>
                 </div>
               </div>
@@ -941,18 +939,14 @@ export function ChillerCard({
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span className={isDark ? "text-slate-300" : "text-zinc-700"}>
-                    تاریخ و ساعت اجرا
-                  </span>
+                  <span className={isDark ? "text-slate-300" : "text-zinc-700"}>{t("timer.runAt")}</span>
                   <span
                     className={`text-[11px] ${
                       isDark ? "text-slate-400" : "text-zinc-500"
                     }`}
                   >
                     {timerJDate
-                      ? `${jalaliMonthNames[timerJDate.jm - 1]} ${toPersianNumber(
-                          timerJDate.jd,
-                        )}، ${toPersianNumber(timerJDate.jy)}`
+                      ? `${monthNames[timerJDate.jm - 1]} ${toLocalizedNumber(timerJDate.jd, locale)}، ${toLocalizedNumber(timerJDate.jy, locale)}`
                       : "-"}
                   </span>
                 </div>
@@ -990,8 +984,8 @@ export function ChillerCard({
                         isDark ? "text-slate-100" : "text-zinc-800"
                       }`}
                     >
-                      {jalaliMonthNames[calendarMonthIndex - 1]}{" "}
-                      {toPersianNumber(calendarYear)}
+                          {monthNames[calendarMonthIndex - 1]}{" "}
+                      {toLocalizedNumber(calendarYear, locale)}
                     </span>
                     <button
                       type="button"
@@ -1044,7 +1038,7 @@ export function ChillerCard({
                     return (
                       <div className="space-y-1">
                         <div className="grid grid-cols-7 text-center text-[10px] mb-1">
-                          {jalaliWeekdaysShort.map((d) => (
+                          {weekdaysShort.map((d) => (
                             <div
                               key={d}
                               className={
@@ -1095,7 +1089,7 @@ export function ChillerCard({
                                           : "text-zinc-800 hover:bg-zinc-100"
                                     }`}
                                   >
-                                    {toPersianNumber(day)}
+                                    {toLocalizedNumber(day, locale)}
                                   </button>
                                 );
                               })}
@@ -1108,9 +1102,7 @@ export function ChillerCard({
                 </div>
 
                 <div className="flex items-center justify-between text-xs mt-3">
-                  <span className={isDark ? "text-slate-300" : "text-zinc-700"}>
-                    ساعت اجرا
-                  </span>
+                  <span className={isDark ? "text-slate-300" : "text-zinc-700"}>{t("timer.runHour")}</span>
                   <div className="flex items-center gap-2">
                     <select
                       value={timerHour}
@@ -1127,7 +1119,7 @@ export function ChillerCard({
                     >
                       {Array.from({ length: 24 }).map((_, i) => (
                         <option key={i} value={i}>
-                          {toPersianNumber(String(i).padStart(2, "0"))}
+                          {toLocalizedNumber(String(i).padStart(2, "0"), locale)}
                         </option>
                       ))}
                     </select>
@@ -1151,7 +1143,7 @@ export function ChillerCard({
                         const val = idx * 5;
                         return (
                           <option key={val} value={val}>
-                            {toPersianNumber(String(val).padStart(2, "0"))}
+                            {toLocalizedNumber(String(val).padStart(2, "0"), locale)}
                           </option>
                         );
                       })}
@@ -1166,10 +1158,8 @@ export function ChillerCard({
                 }`}
               >
                 {timerMode
-                  ? `پکیج ${
-                      timerMode === "on" ? "به‌صورت خودکار روشن" : "به‌صورت خودکار خاموش"
-                    } می‌شود.`
-                  : "نوع عمل (روشن یا خاموش شدن) را انتخاب کنید."}
+                  ? timerMode === "on" ? t("timer.summary.on") : t("timer.summary.off")
+                  : t("timer.summary.none")}
               </div>
             </div>
 
@@ -1187,7 +1177,7 @@ export function ChillerCard({
                       : "bg-transparent border border-zinc-300 text-zinc-700"
                   }`}
                 >
-                  حذف زمان‌بندی
+                  {t("timer.cancel")}
                 </button>
               )}
               <div className="ml-auto flex gap-2">
@@ -1200,7 +1190,7 @@ export function ChillerCard({
                       : "bg-zinc-200 text-zinc-800"
                   }`}
                 >
-                  بستن
+                  {t("modal.close")}
                 </button>
                 <button
                   type="button"
@@ -1217,7 +1207,7 @@ export function ChillerCard({
                       : "bg-[#ff8a3c] text-slate-900 shadow-[0_8px_20px_rgba(255,138,60,0.55)]"
                   }`}
                 >
-                  ثبت زمان‌بندی
+                  {t("timer.submit")}
                 </button>
               </div>
             </div>
@@ -1232,16 +1222,10 @@ export function ChillerCard({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span
-              className={`text-xs ${
-                isDark ? "text-slate-300" : "text-zinc-600"
-              }`}
-            >
-              تنظیم دما (°C)
+            <span className={`text-xs ${isDark ? "text-slate-300" : "text-zinc-600"}`}>
+              {t("setpoint.label")}
             </span>
-            <span className="text-3xl font-semibold tracking-tight">
-              {setpoint.toFixed(1)}
-            </span>
+            <span className="text-3xl font-semibold tracking-tight">{setpoint.toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -1292,7 +1276,7 @@ export function ChillerCard({
               isDark ? "text-slate-200" : "text-zinc-800"
             }`}
           >
-            <span className="text-xs font-semibold">دمای تنظیم شده:</span>
+            <span className="text-xs font-semibold">{t("setpoint.current")}</span>
             <span
               className={`ltr font-extrabold text-2xl sm:text-3xl tracking-tight ${
                 isDark ? "text-sky-400" : "text-sky-600"
@@ -1316,7 +1300,7 @@ export function ChillerCard({
                   : ""
               }`}
             >
-              اعمال دمای جدید
+              {t("setpoint.apply")}
             </button>
           </div>
         </div>
@@ -1330,7 +1314,7 @@ export function ChillerCard({
               : "border-zinc-200 bg-zinc-50 text-zinc-600"
           }`}
         >
-          <span>دمای فعلی:</span>
+          <span>{t("temp.current")}</span>
           <span className="font-semibold">
             {tempCurrent != null ? tempCurrent.toFixed(1) : "-"}
             <span className="mr-1">°C</span>
@@ -1364,15 +1348,16 @@ export function ChillerCard({
             isDark ? "text-slate-100" : "text-zinc-800"
           }`}
         >
-          {toPersianNumber(
+          {toLocalizedNumber(
             Math.max(
               0,
               (startingMode === "off"
                 ? Math.max(1, Math.round(progressOffSeconds || 60))
                 : Math.max(1, Math.round(progressOnSeconds || 60))) - startingSeconds,
             ),
+            locale,
           )}{" "}
-          ثانیه
+          {t("time.second")}
         </div>
         <span
           className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-tight ${
@@ -1385,7 +1370,7 @@ export function ChillerCard({
                 : "bg-emerald-50 text-emerald-700 border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.7)]"
           }`}
         >
-          {startingMode === "off" ? "در حال خاموش شدن..." : "در حال روشن شدن..."}
+          {startingMode === "off" ? t("starting.off") : t("starting.on")}
         </span>
       </div>
     </div>

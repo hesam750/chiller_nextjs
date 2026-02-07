@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { WithAccess } from "@/app/_components/rbac";
+import { useI18n } from "@/app/_components/i18n";
 import { AdminChillerStats } from "@/app/admin/_components/AdminChillerStats";
 import { AdminAddChillerSection } from "@/app/admin/_components/AdminAddChillerSection";
 import fanapLogo from "../../../fanap.png";
@@ -9,6 +10,7 @@ import Image from "next/image";
 import { LogsPanel } from "@/app/admin/_components/LogsPanel";
 import { AdminPdgPanel } from "@/app/admin/_components/AdminPdgPanel";
 import { ChillerCard } from "@/app/admin/_components/ChillerCard";
+import { LanguageSwitcher } from "@/app/_components/LanguageSwitcher";
 
 type Chiller = {
   id: string;
@@ -75,6 +77,7 @@ export default function AdminPage() {
   const [permViewChillers, setPermViewChillers] = useState(false);
   const [permViewPdgs, setPermViewPdgs] = useState(false);
   const [permViewUserActivity, setPermViewUserActivity] = useState(false);
+  const [permChangeLanguage, setPermChangeLanguage] = useState(false);
   const [progressOnSeconds, setProgressOnSeconds] = useState(60);
   const [progressOffSeconds, setProgressOffSeconds] = useState(60);
   const [progressByChiller, setProgressByChiller] = useState<Record<string, { progressOnSeconds: number; progressOffSeconds: number }>>({});
@@ -87,6 +90,7 @@ export default function AdminPage() {
   const [activityUserFilter, setActivityUserFilter] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityLimit, setActivityLimit] = useState(50);
+  const { t } = useI18n();
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     if (
@@ -135,8 +139,8 @@ export default function AdminPage() {
       .then((m) => m.fetchChillers())
       .then((items) => setChillers(items))
       .catch(() => {
-        setMsg("خطا در دریافت لیست");
-        setToast({ message: "خطا در دریافت لیست پکیج‌ها", type: "error" });
+        setMsg(t("err.list.fetch"));
+        setToast({ message: t("err.chillers.fetch"), type: "error" });
         setToastVisible(true);
         setTimeout(() => {
           setToastVisible(false);
@@ -344,6 +348,7 @@ export default function AdminPage() {
       setPermViewChillers(true);
       setPermViewPdgs(true);
       setPermViewUserActivity(true);
+      setPermChangeLanguage(true);
     } else if (r === "manager") {
       setPermViewTimer(true);
       setPermControlTimer(true);
@@ -355,6 +360,7 @@ export default function AdminPage() {
       setPermViewChillers(true);
       setPermViewPdgs(true);
       setPermViewUserActivity(true);
+      setPermChangeLanguage(true);
     } else {
       setPermViewTimer(true);
       setPermControlTimer(false);
@@ -366,6 +372,7 @@ export default function AdminPage() {
       setPermViewChillers(false);
       setPermViewPdgs(false);
       setPermViewUserActivity(false);
+      setPermChangeLanguage(false);
     }
   };
 
@@ -401,30 +408,30 @@ export default function AdminPage() {
       .then((m) => m.fetchChillers())
       .then((items) => setChillers(items))
       .catch(() => {
-        setMsg("خطا در دریافت لیست");
-        showToast("خطا در دریافت لیست پکیج‌ها", "error");
+        setMsg(t("err.list.fetch"));
+        showToast(t("err.chillers.fetch"), "error");
       });
   };
 
   const handleAdd = async () => {
     if (!canEditChillers) {
-      showToast("شما دسترسی افزودن پکیج را ندارید", "error");
+      showToast(t("no.access.addChiller"), "error");
       return;
     }
-    setMsg("در حال افزودن...");
+    setMsg(t("loading.adding"));
     const m = await import("@/lib/services/chillers");
     const item = await m.addChiller({ name, ip, active });
     if (!item) {
-      setMsg("خطا در افزودن");
-      showToast("خطا در افزودن پکیج", "error");
+      setMsg(t("err.addChiller"));
+      showToast(t("err.addChiller"), "error");
       return;
     }
     setChillers((prev) => [...prev, item]);
     setName("");
     setIp("");
     setActive(true);
-    setMsg("افزوده شد");
-    showToast("پکیج با موفقیت افزوده شد", "success");
+    setMsg(t("ok.chiller.added"));
+    showToast(t("ok.chiller.added"), "success");
     try {
       const m2 = await import("@/lib/services/settings");
       const res2 = await m2.updateChillerSettings({
@@ -449,24 +456,24 @@ export default function AdminPage() {
 
   const handleSave = async (c: Chiller) => {
     if (!canEditChillers) {
-      showToast("شما دسترسی ویرایش پکیج را ندارید", "error");
+      showToast(t("no.access.editChiller"), "error");
       return;
     }
-    setMsg("در حال ذخیره...");
+    setMsg(t("loading.saving"));
     const m = await import("@/lib/services/chillers");
     const ok = await m.updateChiller(c.id, { name: c.name, ip: c.ip, active: c.active });
     if (!ok) {
-      setMsg("خطا در ذخیره");
-      showToast("خطا در ذخیره تغییرات پکیج", "error");
+      setMsg(t("err.saveChiller"));
+      showToast(t("err.saveChiller"), "error");
       return;
     }
-    setMsg("ذخیره شد");
-    showToast("تغییرات پکیج با موفقیت ذخیره شد", "success");
+    setMsg(t("ok.chiller.saved"));
+    showToast(t("ok.chiller.saved"), "success");
   };
 
   const handleSaveProgressForChiller = async (c: Chiller) => {
     if (!canEditChillers) {
-      showToast("شما دسترسی ویرایش تنظیمات پکیج را ندارید", "error");
+      showToast(t("no.access.editChillerSettings"), "error");
       return;
     }
     const cur = progressByChiller[c.id] || {
@@ -480,7 +487,7 @@ export default function AdminPage() {
       progressOffSeconds: Math.max(1, Math.round(cur.progressOffSeconds)),
     });
     if (!res) {
-      showToast("خطا در ذخیره زمان پروگرس این پکیج", "error");
+      showToast(t("err.progress.save"), "error");
       return;
     }
     const item = res;
@@ -492,27 +499,27 @@ export default function AdminPage() {
           progressOffSeconds: item.progressOffSeconds,
         },
       }));
-      showToast("زمان پروگرس این پکیج ذخیره شد", "success");
+      showToast(t("ok.progress.saved"), "success");
     } else {
-      showToast("پاسخ نامعتبر از سرور برای ذخیره زمان پروگرس", "error");
+      showToast(t("err.progress.invalidResponse"), "error");
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!canEditChillers) {
-      showToast("شما دسترسی حذف پکیج را ندارید", "error");
+      showToast(t("no.access.deleteChiller"), "error");
       return;
     }
     const m = await import("@/lib/services/chillers");
     const ok = await m.deleteChiller(id);
     if (!ok) {
-      setMsg("خطا در حذف");
-      showToast("خطا در حذف پکیج", "error");
+      setMsg(t("err.deleteChiller"));
+      showToast(t("err.deleteChiller"), "error");
       return;
     }
     setChillers((prev) => prev.filter((x) => x.id !== id));
-    setMsg("حذف شد");
-    showToast("پکیج با موفقیت حذف شد", "success");
+    setMsg(t("ok.chiller.deleted"));
+    showToast(t("ok.chiller.deleted"), "success");
   };
 
   const pdgs: PdgItem[] = chillers.map((c) => {
@@ -537,27 +544,27 @@ export default function AdminPage() {
 
   const handleAddPdg = async () => {
     if (!canEditChillers) {
-      showToast("شما دسترسی افزودن PDG را ندارید", "error");
+      showToast(t("no.access.addPdg"), "error");
       return;
     }
     if (!pdgName.trim() || !pdgIp.trim()) {
-      showToast("لطفاً نام و آدرس IP را وارد کنید", "error");
+      showToast(t("err.pdg.input"), "error");
       return;
     }
 
-    setMsg("در حال افزودن PDG...");
+    setMsg(t("loading.addingPdg"));
     const m = await import("@/lib/services/chillers");
     const item = await m.addChiller({ name: pdgName, ip: pdgIp, active: true });
     if (!item) {
-      setMsg("خطا در افزودن PDG");
-      showToast("خطا در افزودن PDG", "error");
+      setMsg(t("err.addPdg"));
+      showToast(t("err.addPdg"), "error");
       return;
     }
     setChillers((prev) => [...prev, item]);
     setPdgName("");
     setPdgIp("");
-    setMsg("PDG افزوده شد");
-    showToast("PDG با موفقیت افزوده شد", "success");
+    setMsg(t("ok.pdg.added"));
+    showToast(t("ok.pdg.added"), "success");
     try {
       const m2 = await import("@/lib/services/settings");
       const res2 = await m2.updateChillerSettings({
@@ -582,25 +589,25 @@ export default function AdminPage() {
 
   const handleDeletePdg = async (id: string) => {
     if (!canEditChillers) {
-      showToast("شما دسترسی حذف PDG را ندارید", "error");
+      showToast(t("no.access.deletePdg"), "error");
       return;
     }
 
     const m = await import("@/lib/services/chillers");
     const ok = await m.deleteChiller(id);
     if (!ok) {
-      setMsg("خطا در حذف PDG");
-      showToast("خطا در حذف PDG", "error");
+      setMsg(t("err.deletePdg"));
+      showToast(t("err.deletePdg"), "error");
       return;
     }
     setChillers((prev) => prev.filter((x) => x.id !== id));
-    setMsg("PDG حذف شد");
-    showToast("PDG با موفقیت حذف شد", "success");
+    setMsg(t("ok.pdg.deleted"));
+    showToast(t("ok.pdg.deleted"), "success");
   };
 
   const handleDeactivateUser = async (u: { username: string; role: "admin" | "manager" | "viewer"; active: boolean }) => {
     if (!(role === "manager" || role === "admin")) {
-      showToast("شما دسترسی غیرفعال‌سازی کاربران را ندارید", "error");
+      showToast(t("no.access.deactivateUser"), "error");
       return;
     }
     if (!u.active) return;
@@ -610,11 +617,11 @@ export default function AdminPage() {
       body: JSON.stringify({ username: u.username, active: false }),
     });
     if (!res.ok) {
-      showToast("خطا در غیرفعال‌سازی کاربر", "error");
+      showToast(t("err.user.deactivate"), "error");
       return;
     }
     setUsers((prev) => prev.map((x) => (x.username === u.username ? { ...x, active: false } : x)));
-    showToast("اکانت غیرفعال شد", "success");
+    showToast(t("ok.user.deactivated"), "success");
   };
 
   return (
@@ -622,19 +629,19 @@ export default function AdminPage() {
       className={
         theme === "dark"
           ? "min-h-screen bg-[#020617] text-slate-50"
-          : "min-h-screen bg-slate-100 text-slate-900"
+          : "min-h-screen bg-[#f7f9fc] text-[#1f2937]"
       }
     >
       <header
         className={
           theme === "dark"
             ? "flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950"
-            : "flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-white"
+            : "flex items-center justify-between px-6 py-3 border-b border-[#e6edf7] bg-[#f9fafb]"
         }
       >
         <div className="flex items-center gap-2">
           <Image src={fanapLogo} alt="Fanap" className="h-6 w-auto" />
-          <strong className="text-sm">پنل ادمین</strong>
+          <strong className="text-sm">{t("admin.header.title")}</strong>
         </div>
         <div className="flex items-center gap-2">
           <a
@@ -642,10 +649,10 @@ export default function AdminPage() {
             className={
               theme === "dark"
                 ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-100"
-                : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800 hover:bg-slate-50"
+                : "rounded-lg border border-[#dbe5f1] bg-[#ffffff] px-3 py-1 text-xs text-[#334155] hover:bg-[#eef3fb]"
             }
           >
-            داشبورد
+            {t("admin.nav.dashboard")}
           </a>
           {role === "manager" && (
             <button
@@ -657,7 +664,7 @@ export default function AdminPage() {
                   : "rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
               }
             >
-              مدیریت پیشرفته کاربران
+              {t("admin.users.manage")}
             </button>
           )}
           <button
@@ -671,7 +678,7 @@ export default function AdminPage() {
                 : "rounded-lg border border-slate-300 bg-slate-100 px-3 py-1 text-xs"
             }
           >
-            تم: {theme === "dark" ? "تاریک" : "روشن"}
+            {t("theme.label")}: {theme === "dark" ? t("theme.dark") : t("theme.light")}
           </button>
           <form
             onSubmit={(e) => {
@@ -689,11 +696,22 @@ export default function AdminPage() {
                   : "rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100"
               }
             >
-              خروج
+              {t("logout")}
             </button>
           </form>
         </div>
       </header>
+      <div className="px-6 pt-2">
+        <WithAccess anyPerms={["canChangeLanguage"]}>
+          <LanguageSwitcher
+            className={
+              theme === "dark"
+                ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-100"
+                : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800"
+            }
+          />
+        </WithAccess>
+      </div>
       <main className="px-4 py-4 space-y-4">
         <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
           <WithAccess
@@ -751,7 +769,7 @@ export default function AdminPage() {
             />
           </WithAccess>
 
-          <section className="lg:col-span-12 mt-4 grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <section className="lg:col-span-12 mt-4 grid gap-4 two-col-lg-grid">
             <WithAccess
               anyRoles={["admin", "manager"]}
               anyPerms={["canViewChillers"]}
@@ -774,7 +792,7 @@ export default function AdminPage() {
               }
             >
               <div>
-                <h4 className="mb-3 text-sm font-semibold">پکیج‌ها</h4>
+                <h4 className="mb-3 text-sm font-semibold">{t("chillers")}</h4>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {chillers.map((c) => (
                     <ChillerCard
@@ -834,7 +852,7 @@ export default function AdminPage() {
             className={
               theme === "dark"
                 ? "mt-4 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl px-4 py-4"
-                : "mt-4 rounded-2xl border border-slate-200 bg-white shadow-xl px-4 py-4"
+                : "mt-4 rounded-2xl border border-[#e6edf7] bg-[#fbfcff] shadow-xl px-4 py-4"
             }
           >
             <AdminPdgPanel
@@ -852,11 +870,11 @@ export default function AdminPage() {
             className={
               theme === "dark"
                 ? "mt-4 rounded-2xl border border-slate-800 bg-slate-950 shadow-xl px-4 py-4"
-                : "mt-4 rounded-2xl border border-slate-200 bg-white shadow-xl px-4 py-4"
+                : "mt-4 rounded-2xl border border-[#e6edf7] bg-[#fbfcff] shadow-xl px-4 py-4"
             }
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-              <h2 className="text-sm font-semibold">آخرین فعالیت کاربران</h2>
+              <h2 className="text-sm font-semibold">{t("admin.activity.title")}</h2>
               <div className="flex items-center gap-2">
                 <input
                   value={activityUserFilter}
@@ -864,7 +882,7 @@ export default function AdminPage() {
                     setActivityUserFilter(e.target.value);
                     setActivityLimit(50);
                   }}
-                  placeholder="فیلتر نام کاربری"
+                  placeholder={t("admin.activity.filter.placeholder")}
                   className={
                     theme === "dark"
                       ? "rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
@@ -883,7 +901,7 @@ export default function AdminPage() {
                       : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
                   }
                 >
-                  حذف فیلتر
+                  {t("admin.activity.filter.clear")}
                 </button>
               </div>
             </div>
@@ -895,34 +913,42 @@ export default function AdminPage() {
                     : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
                 }
               >
-                {activityLoading ? "در حال بارگذاری..." : "لاگی ثبت نشده است."}
+                {activityLoading ? t("admin.activity.loading") : t("admin.activity.empty")}
               </div>
             ) : (
               <>
               <ul className="space-y-2">
                 {activityLogs.map((a) => {
-                const atText = new Date(a.at).toLocaleString("fa-IR");
+                const atText = new Date(a.at).toLocaleString(
+                  typeof document !== "undefined"
+                    ? (document.documentElement.getAttribute("lang") === "en"
+                        ? "en-US"
+                        : document.documentElement.getAttribute("lang") === "ar"
+                          ? "ar"
+                          : "fa-IR")
+                    : "fa-IR",
+                );
                 const title =
                   a.action === "user.create"
-                    ? "ایجاد کاربر"
+                    ? t("action.user.create")
                     : a.action === "user.update"
-                      ? "بروزرسانی کاربر"
+                      ? t("action.user.update")
                       : a.action === "user.deactivate"
-                        ? "غیرفعال‌سازی کاربر"
+                        ? t("action.user.deactivate")
                         : a.action === "user.delete"
-                          ? "حذف کاربر"
+                          ? t("action.user.delete")
                           : a.action === "auth.login"
-                            ? "ورود کاربران"
+                            ? t("action.auth.login")
                           : a.action === "chiller.create"
-                            ? "ایجاد پکیج"
+                            ? t("action.chiller.create")
                             : a.action === "chiller.update"
-                              ? "بروزرسانی پکیج"
+                              ? t("action.chiller.update")
                               : a.action === "chiller.delete"
-                                ? "حذف پکیج"
+                                ? t("action.chiller.delete")
                                 : a.action === "settings.update_global"
-                                  ? "ویرایش تنظیمات عمومی"
+                                  ? t("action.settings.update_global")
                                   : a.action === "settings.update_chiller"
-                                    ? "ویرایش تنظیمات پکیج"
+                                    ? t("action.settings.update_chiller")
                                     : a.action;
                 const d = a.details as Record<string, unknown> | undefined;
                 const detailText =
@@ -948,7 +974,7 @@ export default function AdminPage() {
                       <span className="ltr text-slate-400">{atText}</span>
                     </div>
                     <div className="mt-1 text-slate-400">
-                      توسط <span className="font-semibold">{a.username}</span>
+                      {t("admin.activity.by")} <span className="font-semibold">{a.username}</span>
                     </div>
                   </li>
                 );
@@ -965,7 +991,7 @@ export default function AdminPage() {
                       : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800 disabled:opacity-50"
                   }
                 >
-                  نمایش بیشتر
+                  {t("admin.activity.more")}
                 </button>
               </div>
               </>
@@ -999,7 +1025,7 @@ export default function AdminPage() {
               }
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">مدیریت PDG</h3>
+                <h3 className="text-lg font-semibold">{t("pdg.manage")}</h3>
                 <button
                   type="button"
                   onClick={() => setPdgModalOpen(false)}
@@ -1026,14 +1052,12 @@ export default function AdminPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-400 mb-2 block">
-                    نام PDG
-                  </label>
+                  <label className="text-sm font-medium text-slate-400 mb-2 block">{t("pdg.name")}</label>
                   <input
                     type="text"
                     value={pdgName}
                     onChange={(e) => setPdgName(e.target.value)}
-                    placeholder="مثلاً PDG 1"
+                    placeholder={t("pdg.name.placeholder")}
                     className={
                       theme === "dark"
                         ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
@@ -1043,14 +1067,12 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-slate-400 mb-2 block">
-                    آدرس IP
-                  </label>
+                  <label className="text-sm font-medium text-slate-400 mb-2 block">{t("pdg.ip")}</label>
                   <input
                     type="text"
                     value={pdgIp}
                     onChange={(e) => setPdgIp(e.target.value)}
-                    placeholder="مثلاً 192.168.1.10"
+                    placeholder={t("ip.placeholder")}
                     className={
                       theme === "dark"
                         ? "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm ltr text-slate-100"
@@ -1069,7 +1091,7 @@ export default function AdminPage() {
                         : "flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     }
                   >
-                    انصراف
+                    {t("pdg.cancel")}
                   </button>
                   <button
                     type="button"
@@ -1081,7 +1103,7 @@ export default function AdminPage() {
                         : "flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     }
                   >
-                    افزودن PDG
+                    {t("pdg.add")}
                   </button>
                 </div>
               </div>
@@ -1090,16 +1112,16 @@ export default function AdminPage() {
         )}
 
         {usersModalOpen && role === "manager" && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6">
             <div
               className={
                 theme === "dark"
-                  ? "w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-950 p-6 shadow-2xl"
-                  : "w-full max-w-2xl rounded-2xl border border-slate-300 bg-white p-6 shadow-2xl"
+                  ? "w-full sm:max-w-2xl max-w-[96vw] rounded-2xl border border-slate-700 bg-slate-950 p-6 shadow-2xl max-h-[85vh] overflow-auto"
+                  : "w-full sm:max-w-2xl max-w-[96vw] rounded-2xl border border-slate-300 bg-white p-6 shadow-2xl max-h-[85vh] overflow-auto"
               }
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">مدیریت پیشرفته کاربران</h3>
+                <h3 className="text-lg font-semibold">{t("admin.users.manage")}</h3>
                 <button
                   type="button"
                   onClick={() => setUsersModalOpen(false)}
@@ -1118,9 +1140,9 @@ export default function AdminPage() {
                   </svg>
                 </button>
               </div>
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs text-slate-400">نام کاربری</label>
+                  <label className="text-xs text-slate-400">{t("login.username")}</label>
                   <input
                     className={
                       theme === "dark"
@@ -1129,9 +1151,9 @@ export default function AdminPage() {
                     }
                     value={userUsername}
                     onChange={(e) => setUserUsername(e.target.value)}
-                    placeholder="مثلاً user1"
+                    placeholder={t("user.username.placeholder")}
                   />
-                  <label className="text-xs text-slate-400">رمز عبور</label>
+                  <label className="text-xs text-slate-400">{t("password")}</label>
                   <input
                     type="password"
                     className={
@@ -1144,17 +1166,17 @@ export default function AdminPage() {
                       setUserPassword(e.target.value);
                       evaluatePasswordStrength(e.target.value);
                     }}
-                    placeholder="رمز عبور"
+                    placeholder={t("password")}
                   />
                   <div className="flex items-center gap-2 text-[11px]">
                     <span className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
                       {passwordStrength === "empty"
-                        ? "رمز عبور وارد نشده"
+                        ? t("password.empty")
                         : passwordStrength === "weak"
-                          ? "ضعیف"
+                          ? t("password.weak")
                           : passwordStrength === "medium"
-                            ? "متوسط"
-                            : "قوی"}
+                            ? t("password.medium")
+                            : t("password.strong")}
                     </span>
                     <div className="flex-1 h-1 rounded-full overflow-hidden">
                       <div
@@ -1170,7 +1192,7 @@ export default function AdminPage() {
                       />
                     </div>
                   </div>
-                  <label className="text-xs text-slate-400">نقش</label>
+                  <label className="text-xs text-slate-400">{t("role.label")}</label>
                   <select
                     className={
                       theme === "dark"
@@ -1184,9 +1206,9 @@ export default function AdminPage() {
                       applyRolePreset(v);
                     }}
                   >
-                    <option value="viewer">بیننده</option>
-                    <option value="manager">مدیر</option>
-                    <option value="admin">ادمین</option>
+                    <option value="viewer">{t("role.viewer")}</option>
+                    <option value="manager">{t("role.manager")}</option>
+                    <option value="admin">{t("role.admin")}</option>
                   </select>
                   <button
                     type="button"
@@ -1197,36 +1219,40 @@ export default function AdminPage() {
                         : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800"
                     }
                   >
-                    اعمال پیش‌فرض نقش
+                    {t("apply.role.preset")}
                   </button>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
-                    <span>فعال</span>
+                    <span>{t("status.active")}</span>
                     <input type="checkbox" checked={userActive} onChange={(e) => setUserActive(e.target.checked)} />
                   </label>
-                  <div className="mt-2 text-xs font-semibold">سطح دسترسی</div>
+                  <div className="mt-2 text-xs font-semibold">{t("permissions.title")}</div>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permViewTimer} onChange={(e) => setPermViewTimer(e.target.checked)} />
-                    <span>مشاهده تایمر</span>
+                    <span>{t("perm.viewTimer")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permControlTimer} onChange={(e) => setPermControlTimer(e.target.checked)} />
-                    <span>تنظیم تایمر</span>
+                    <span>{t("perm.controlTimer")}</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" checked={permChangeLanguage} onChange={(e) => setPermChangeLanguage(e.target.checked)} />
+                    <span>{t("perm.changeLanguage")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permTogglePower} onChange={(e) => setPermTogglePower(e.target.checked)} />
-                    <span>خاموش/روشن</span>
+                    <span>{t("perm.togglePower")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permSetTemperature} onChange={(e) => setPermSetTemperature(e.target.checked)} />
-                    <span>تنظیم دما</span>
+                    <span>{t("perm.setTemperature")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permViewChillers} onChange={(e) => setPermViewChillers(e.target.checked)} />
-                    <span>مشاهده لیست پکیج‌ها</span>
+                    <span>{t("perm.viewChillers")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permViewPdgs} onChange={(e) => setPermViewPdgs(e.target.checked)} />
-                    <span>مشاهده PDG ها</span>
+                    <span>{t("perm.viewPdgs")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input
@@ -1234,19 +1260,19 @@ export default function AdminPage() {
                       checked={permViewUserActivity}
                       onChange={(e) => setPermViewUserActivity(e.target.checked)}
                     />
-                    <span>آخرین فعالیت کاربران</span>
+                    <span>{t("perm.viewUserActivity")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permAddPackage} onChange={(e) => setPermAddPackage(e.target.checked)} />
-                    <span>افزودن پکیج + PDG</span>
+                    <span>{t("perm.addPackage")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permManageUsers} onChange={(e) => setPermManageUsers(e.target.checked)} />
-                    <span>دسترسی به مدیریت کاربران</span>
+                    <span>{t("perm.manageUsers")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-400">
                     <input type="checkbox" checked={permViewLogs} onChange={(e) => setPermViewLogs(e.target.checked)} />
-                    <span>دسترسی به لاگ‌ها</span>
+                    <span>{t("perm.viewLogs")}</span>
                   </label>
                   <div className="flex gap-2 pt-2">
                     <button
@@ -1270,23 +1296,24 @@ export default function AdminPage() {
                             canViewChillers: permViewChillers,
                             canViewPdgs: permViewPdgs,
                             canViewUserActivity: permViewUserActivity,
+                            canChangeLanguage: permChangeLanguage,
                           },
                         };
                         if (!payload.username || !/^[\p{L}\p{N}._-]{3,}$/u.test(payload.username)) {
-                          setFormError("نام کاربری باید حداقل ۳ کاراکتر و معتبر باشد");
-                          showToast("نام کاربری نامعتبر است", "error");
+                          setFormError(t("err.user.username.minlen"));
+                          showToast(t("err.user.username.invalid"), "error");
                           return;
                         }
                         if (!userEditing) {
                           if (!payload.password || payload.password.length < 8) {
-                            setFormError("رمز عبور باید حداقل ۸ کاراکتر باشد");
-                            showToast("رمز عبور ضعیف است", "error");
+                            setFormError(t("err.password.minlen"));
+                            showToast(t("err.password.weak"), "error");
                             return;
                           }
                         } else {
                           if (payload.password && payload.password.length < 8) {
-                            setFormError("حداقل طول رمز برای تغییر باید ۸ کاراکتر باشد");
-                            showToast("رمز عبور ضعیف است", "error");
+                            setFormError(t("err.password.change.minlen"));
+                            showToast(t("err.password.weak"), "error");
                             return;
                           }
                         }
@@ -1300,7 +1327,7 @@ export default function AdminPage() {
                         });
                         setSavingUser(false);
                         if (!res.ok) {
-                          showToast("خطا در ذخیره کاربر", "error");
+                          showToast(t("err.user.save"), "error");
                           return;
                         }
                         const j = await res.json().catch(() => null);
@@ -1314,7 +1341,7 @@ export default function AdminPage() {
                             next[idx] = { username: j.item.username, role: j.item.role, active: j.item.active, permissions: j.item.permissions };
                             return next;
                           });
-                          showToast(userEditing ? "کاربر بروزرسانی شد" : "کاربر افزوده شد", "success");
+                          showToast(userEditing ? t("ok.user.updated") : t("ok.user.added"), "success");
                           setUserEditing(j.item.username);
                         }
                       }}
@@ -1325,25 +1352,25 @@ export default function AdminPage() {
                       }
                       disabled={savingUser}
                     >
-                      {savingUser ? "در حال ذخیره..." : userEditing ? "ذخیره تغییرات" : "افزودن کاربر"}
+                      {savingUser ? t("admin.users.saving") : userEditing ? t("admin.users.save") : t("admin.users.add")}
                     </button>
                     {userEditing && (
                       <button
                         type="button"
                         onClick={async () => {
                           if (!userEditing) return;
-                          if (!confirm("آیا از حذف این کاربر اطمینان دارید؟")) return;
+                          if (!confirm(t("user.confirm.delete"))) return;
                           const res = await fetch("/api/users", {
                             method: "DELETE",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ username: userEditing }),
                           });
                           if (!res.ok) {
-                            showToast("خطا در حذف کاربر", "error");
+                            showToast(t("err.user.delete"), "error");
                             return;
                           }
                           setUsers((prev) => prev.filter((x) => x.username !== userEditing));
-                          showToast("کاربر حذف شد", "success");
+                          showToast(t("ok.user.deleted"), "success");
                           setUserEditing(null);
                           setUserUsername("");
                           setUserPassword("");
@@ -1366,7 +1393,7 @@ export default function AdminPage() {
                             : "rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
                         }
                       >
-                        حذف کاربر
+                        {t("action.user.delete")}
                       </button>
                     )}
                     <button
@@ -1396,7 +1423,7 @@ export default function AdminPage() {
                           : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                       }
                     >
-                      ایجاد کاربر جدید
+                      {t("admin.users.add")}
                     </button>
                   </div>
                   {formError && (
@@ -1407,12 +1434,12 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="flex flex-col gap-2">
-                  <div className="text-xs text-slate-400 mb-1">کاربران</div>
+                  <div className="text-xs text-slate-400 mb-1">{t("users.title")}</div>
                   <div className="flex items-center gap-2 mb-2">
                     <input
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
-                      placeholder="جستجو کاربر یا نقش"
+                      placeholder={t("users.search.placeholder")}
                       className={
                         theme === "dark"
                           ? "flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
@@ -1420,7 +1447,7 @@ export default function AdminPage() {
                       }
                     />
                   </div>
-                  <div className="max-h-[360px] overflow-auto rounded-xl border p-2">
+                  <div className="max-h-[50vh] sm:max-h-[360px] overflow-auto rounded-xl border p-2">
                     <ul className="space-y-1 text-sm">
                       {filteredUsers.map((u) => (
                         <li key={u.username} className="flex items-center justify-between gap-2">
@@ -1443,6 +1470,7 @@ export default function AdminPage() {
                               setPermViewChillers(!!u.permissions?.canViewChillers);
                               setPermViewPdgs(!!u.permissions?.canViewPdgs);
                               setPermViewUserActivity(!!u.permissions?.canViewUserActivity);
+                              setPermChangeLanguage(!!u.permissions?.canChangeLanguage);
                             }}
                             className={
                               theme === "dark"
@@ -1451,7 +1479,7 @@ export default function AdminPage() {
                             }
                           >
                             <div className="font-semibold">{u.username}</div>
-                            <div className="text-[11px] text-slate-400">نقش: {u.role}</div>
+                            <div className="text-[11px] text-slate-400">{t("role.label")}: {u.role === "admin" ? t("role.admin") : u.role === "manager" ? t("role.manager") : t("role.viewer")}</div>
                           </button>
                           <div className="flex items-center gap-2">
                             <span
@@ -1460,7 +1488,7 @@ export default function AdminPage() {
                               }`}
                             >
                               <span className="w-2 h-2 rounded-full bg-current" />
-                              {u.active ? "فعال" : "غیرفعال"}
+                              {u.active ? t("status.active") : t("status.inactive")}
                             </span>
                             {u.active ? (
                               <button
@@ -1472,7 +1500,7 @@ export default function AdminPage() {
                                     : "rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
                                 }
                               >
-                                غیرفعال
+                                {t("status.inactive")}
                               </button>
                             ) : (
                               <button
@@ -1483,11 +1511,11 @@ export default function AdminPage() {
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({ username: u.username, active: true }),
                                   });
-                                  if (res.ok) {
+                                if (res.ok) {
                                     setUsers((prev) => prev.map((x) => (x.username === u.username ? { ...x, active: true } : x)));
-                                    showToast("اکانت فعال شد", "success");
+                                    showToast(t("ok.user.activated"), "success");
                                   } else {
-                                    showToast("خطا در فعال‌سازی کاربر", "error");
+                                    showToast(t("err.user.activate"), "error");
                                   }
                                 }}
                                 className={
@@ -1496,13 +1524,13 @@ export default function AdminPage() {
                                     : "rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
                                 }
                               >
-                                فعال
+                                {t("status.active")}
                               </button>
                             )}
                             <button
                               type="button"
                               onClick={async () => {
-                                if (!confirm("آیا از حذف این کاربر اطمینان دارید؟")) return;
+                              if (!confirm(t("user.confirm.delete"))) return;
                                 const res = await fetch("/api/users", {
                                   method: "DELETE",
                                   headers: { "Content-Type": "application/json" },
@@ -1510,9 +1538,9 @@ export default function AdminPage() {
                                 });
                                 if (res.ok) {
                                   setUsers((prev) => prev.filter((x) => x.username !== u.username));
-                                  showToast("کاربر حذف شد", "success");
+                                  showToast(t("ok.user.deleted"), "success");
                                 } else {
-                                  showToast("خطا در حذف کاربر", "error");
+                                  showToast(t("err.user.delete"), "error");
                                 }
                               }}
                               className={
@@ -1521,7 +1549,7 @@ export default function AdminPage() {
                                   : "rounded-lg bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-300"
                               }
                             >
-                              حذف
+                              {t("delete")}
                             </button>
                           </div>
                         </li>

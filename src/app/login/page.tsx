@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import fanapLogo from "../../../fanap.png";
+import { useI18n } from "../_components/i18n";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useI18n();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +25,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
-        setError("ورود نامعتبر");
+        setError(t("login.invalid"));
         return;
       }
       const data = await res.json();
@@ -33,7 +35,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch {
-      setError("خطا در ارتباط با سرور");
+      setError(t("login.error"));
     } finally {
       setLoading(false);
     }
@@ -119,17 +121,17 @@ export default function LoginPage() {
           <div className="flex justify-center mb-6">
             <div className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-slate-900/60 px-3 py-2">
               <img src={fanapLogo.src} alt="Fanap Tech" className="h-7 w-auto" />
-              <span className="text-sm font-semibold tracking-tight">Fanap Tech</span>
+              <span className="text-sm font-semibold tracking-tight">{t("login.brand")}</span>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-2 tracking-wide">
-                نام کاربری
+                {t("login.username")}
               </label>
               <input
                 className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 text-sm text-slate-50 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40"
-                placeholder="نام کاربری سازمانی"
+                placeholder={t("login.username.placeholder")}
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -137,13 +139,13 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-2 tracking-wide">
-                رمز عبور
+                {t("login.password")}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 pl-12 text-sm text-slate-50 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40"
-                  placeholder="رمز عبور خود را وارد کنید"
+                  placeholder={t("login.password.placeholder")}
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -174,7 +176,7 @@ export default function LoginPage() {
               disabled={loading}
               className="mt-4 w-full rounded-xl bg-gradient-to-tr from-blue-500 to-blue-600 px-4 py-3 text-sm font-semibold tracking-wide text-white shadow-[0_8px_24px_rgba(59,130,246,0.4)] transition hover:from-blue-600 hover:to-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? "در حال ورود..." : "ورود"}
+              {loading ? t("login.loading") : t("login.submit")}
             </button>
           </form>
         </div>
