@@ -17,10 +17,10 @@ async function requireManageTabs() {
 
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
     const tabs = await loadTabs();
     const tab = tabs.find((t) => t.id === id);
     if (!tab) {
@@ -35,13 +35,13 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!(await requireManageTabs())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const body = await req.json().catch(() => null);
   if (
     !body ||
@@ -80,13 +80,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!(await requireManageTabs())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { id } = context.params;
+  const { id } = await context.params;
 
   try {
     const deletedTab = await deleteTab(id);
