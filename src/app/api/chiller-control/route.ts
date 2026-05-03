@@ -14,6 +14,9 @@ type VarsConfig = {
   FanSpeedFb?: string;
   AlarmActive?: string;
   ModeFb?: string;
+  SeasonCmd?: string;
+  SeasonFb?: string;
+  seasonwinter?: string;
 };
 
 function loadVarsConfig(): VarsConfig {
@@ -29,8 +32,9 @@ function loadVarsConfig(): VarsConfig {
     return {
       PowerCmd: typeof vars.PowerCmd === "string" ? vars.PowerCmd : "SystemStatus.Ctrl",
       ModeCmd: typeof vars.ModeCmd === "string" ? vars.ModeCmd : "SetTyp",
-      TempCurrent: typeof vars.TempCurrent === "string" ? vars.TempCurrent : "ReturnTemp.ReadVal",
-      TempReturn: typeof vars.TempReturn === "string" ? vars.TempReturn : "ReturnTemp.ReadVal",
+      TempCurrent: typeof vars.TempCurrent === "string" ? vars.TempCurrent : "RetTemp.ReadVal",
+      TempReturn: typeof vars.TempReturn === "string" ? vars.TempReturn : "	RetTemp.ReadVal",
+      seasonwinter: typeof vars.seasonwinter === "string" ? vars.seasonwinter : "WinSum.ReadVal",
       TempSetpoint: typeof vars.TempSetpoint === "string" ? vars.TempSetpoint : "CurrRoomTempSetP_Val",
       PowerFb: typeof vars.PowerFb === "string" ? vars.PowerFb : "SystemStatus.Ctrl",
       FanSpeedFb:
@@ -39,18 +43,23 @@ function loadVarsConfig(): VarsConfig {
           : "MB_Devices.FanElectricalInfo_ZA_1.Modulation",
       AlarmActive: typeof vars.AlarmActive === "string" ? vars.AlarmActive : "Al03_PWRP_1.Active",
       ModeFb: typeof vars.ModeFb === "string" ? vars.ModeFb : "SetTyp",
+      SeasonCmd: typeof vars.SeasonCmd === "string" ? vars.SeasonCmd : undefined,
+      SeasonFb: typeof vars.SeasonFb === "string" ? vars.SeasonFb : undefined,
     };
   } catch {
     return {
       PowerCmd: "SystemStatus.Ctrl",
       ModeCmd: "SetTyp",
-      TempCurrent: "ReturnTemp.ReadVal",
-      TempReturn: "ReturnTemp.ReadVal",
+      TempCurrent: "RetTemp.ReadVal",
+      TempReturn: "RetTemp.ReadVal",
       TempSetpoint: "CurrRoomTempSetP_Val",
       PowerFb: "SystemStatus.Ctrl",
       FanSpeedFb: "MB_Devices.FanElectricalInfo_ZA_1.Modulation",
       AlarmActive: "Al03_PWRP_1.Active",
       ModeFb: "SetTyp",
+      SeasonCmd: undefined,
+      SeasonFb: undefined,
+      seasonwinter: "WinSum.ReadVal",
     };
   }
 }
@@ -407,6 +416,197 @@ function clamp(v: number, mn: number, mx: number): number {
   return Math.max(mn, Math.min(mx, v));
 }
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function toSeason(raw: unknown): "winter" | "summer" | null {
+  if (raw == null) return null;
+  const n = toNum(raw);
+  if (!Number.isNaN(n)) {
+    if (n <= 0) return "winter";
+    if (n >= 1) return "summer";
+  }
+  const s = String(raw || "").toLowerCase();
+  if (!s) return null;
+  if (s.includes("winter") || s.includes("heat") || s.includes("heating")) return "winter";
+  if (s.includes("summer") || s.includes("cool") || s.includes("cooling")) return "summer";
+  return null;
+}
+
+async function readWinSum(ip: string, varsCfg: VarsConfig): Promise<"winter" | "summer" | null> {
+  const varName = varsCfg.seasonwinter || "WinSum.ReadVal";
+  const raw = await readVar(ip, varName);
+  if (raw === null) return null;
+  const num = Number(raw);
+  if (isNaN(num)) return null;
+  return num === 0 ? "winter" : num === 1 ? "summer" : null;
+}
+
+async function writeWinSum(ip: string, varsCfg: VarsConfig, value: 0 | 1): Promise<boolean> {
+  const varName = varsCfg.seasonwinter || "WinSum.ReadVal";
+  return await writeVar(ip, varName, value);
+}
+
+function rankSeasonCandidates(names: string[], preferCmd: boolean) {
+  const scored = names.map((n) => {
+    const s = n.toLowerCase();
+    let score = 0;
+    if (preferCmd) {
+      if (/cmd|set|write|target|ctrl|req/.test(s)) score += 4;
+      if (/fb|feedback|readval|status|state|actual|act/.test(s)) score -= 4;
+    } else {
+      if (/fb|feedback|readval|status|state|actual|act/.test(s)) score += 4;
+      if (/cmd|set|write|target|ctrl|req/.test(s)) score -= 4;
+    }
+    if (/season/.test(s)) score += 2;
+    if (/summer|winter|heat|cool|heating|cooling/.test(s)) score += 1;
+    return { n, score };
+  });
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.n);
+}
+
+type SeasonVarCache = {
+  cmd?: string;
+  fb?: string;
+  map?: { winter?: string; summer?: string };
+  updatedAt: number;
+};
+
+const seasonVarCache = new Map<string, SeasonVarCache>();
+const SEASON_VAR_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+function getSeasonCache(ip: string) {
+  const v = seasonVarCache.get(ip);
+  if (!v) return null;
+  if (Date.now() - v.updatedAt > SEASON_VAR_CACHE_TTL_MS) {
+    seasonVarCache.delete(ip);
+    return null;
+  }
+  return v;
+}
+
+function setSeasonCache(ip: string, patch: Partial<SeasonVarCache>) {
+  const prev = getSeasonCache(ip);
+  const next: SeasonVarCache = {
+    cmd: patch.cmd ?? prev?.cmd,
+    fb: patch.fb ?? prev?.fb,
+    map: patch.map ?? prev?.map,
+    updatedAt: Date.now(),
+  };
+  seasonVarCache.set(ip, next);
+}
+
+function toSeasonWithMap(raw: unknown, map?: { winter?: string; summer?: string }) {
+  if (raw == null) return null;
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (map) {
+    if (map.winter && s === String(map.winter).trim().toLowerCase()) return "winter";
+    if (map.summer && s === String(map.summer).trim().toLowerCase()) return "summer";
+  }
+  return toSeason(raw);
+}
+
+async function detectSeasonCandidateLists(ip: string) {
+  const text = await fetchDeviceText(ip);
+  if (!text) return { cmd: [] as string[], fb: [] as string[], all: [] as string[], names: [] as string[] };
+  const rows = parseResponse(text);
+  const names = rows.map((r) => String(r.name || "").trim()).filter(Boolean);
+  const candidates = names.filter((n) =>
+    /season|summer|winter|heat|cool|heating|cooling|win.*sum|sum.*win|heatcool|coolheat|changeover|hc|h\/c/.test(
+      n.toLowerCase(),
+    ),
+  );
+  const cmd = rankSeasonCandidates(candidates, true);
+  const fb = rankSeasonCandidates(candidates, false);
+  return { cmd, fb, all: candidates, names };
+}
+
+async function applySeason(ip: string, desired: "winter" | "summer", varsCfg?: VarsConfig): Promise<{ ok: boolean; season: "winter" | "summer" | null }> {
+  // اول سعی کن با WinSum بنویس
+  const value = desired === "winter" ? 0 : 1;
+  const winSumSuccess = await writeWinSum(ip, varsCfg || loadVarsConfig(), value);
+  
+  if (winSumSuccess) {
+    // تأیید بگیر
+    const readBack = await readWinSum(ip, varsCfg || loadVarsConfig());
+    if (readBack === desired) {
+      return { ok: true, season: desired };
+    }
+  }
+  
+  // اگه WinSum جواب نداد، برو سراغ روش قدیمی (که از قبل توی کدت هست)
+  // ... کد قدیمی applySeason که براتون ناقص مونده بود رو اینجا قرار میدم
+  
+  const lists = await detectSeasonCandidateLists(ip);
+  const queue: string[] = [];
+  const cached = getSeasonCache(ip);
+  if (cached?.cmd) queue.push(cached.cmd);
+  if (varsCfg && varsCfg.SeasonCmd) queue.push(varsCfg.SeasonCmd);
+  queue.push(...lists.cmd);
+  queue.push(...lists.all);
+  const seen = new Set<string>();
+  const vars = queue.filter((n) => {
+    const v = String(n || "").trim();
+    if (!v || seen.has(v)) return false;
+    seen.add(v);
+    return true;
+  });
+  if (!vars.length) return { ok: false, season: null };
+  const tries =
+    desired === "winter"
+      ? ["0", 0, "winter", "heat", "heating", -1]
+      : ["1", 1, "summer", "cool", "cooling", 2];
+  const readQueue: string[] = [];
+  if (cached?.fb) readQueue.push(cached.fb);
+  if (varsCfg && varsCfg.SeasonFb) readQueue.push(varsCfg.SeasonFb);
+  readQueue.push(...lists.fb);
+  readQueue.push(...lists.all);
+  readQueue.push(...lists.cmd);
+  const readSeen = new Set<string>();
+  const readVars = readQueue.filter((n) => {
+    const v = String(n || "").trim();
+    if (!v || readSeen.has(v)) return false;
+    readSeen.add(v);
+    return true;
+  });
+  for (const varName of vars) {
+    for (const val of tries) {
+      try {
+        const ok = await writeVar(ip, varName, val as string | number);
+        await delay(600);
+        const valStr = String(val).trim().toLowerCase();
+        for (const rVar of readVars) {
+          const rb = await readVar(ip, rVar);
+          const cur = toSeasonWithMap(rb, cached?.map);
+          const rbStr = String(rb ?? "").trim().toLowerCase();
+          if (ok && (cur === desired || (rbStr && rbStr === valStr))) {
+            const map = rbStr
+              ? {
+                  ...(cached?.map || {}),
+                  [desired]: rbStr,
+                }
+              : cached?.map;
+            setSeasonCache(ip, { cmd: varName, fb: rVar, map });
+            return { ok: true, season: desired };
+          }
+        }
+      } catch {
+      }
+    }
+  }
+  if (readVars.length) {
+    const rb = await readVar(ip, readVars[0]);
+    const cur = toSeasonWithMap(rb, cached?.map);
+    return { ok: cur === desired, season: cur };
+  }
+  return { ok: false, season: null };
+}
+
 async function applySetpoint(ip: string, varsCfg: VarsConfig, desired: number) {
   const v = clamp(desired, 0, 50);
   const varName = varsCfg.TempSetpoint || "CurrRoomTempSetP_Val";
@@ -516,7 +716,8 @@ async function readStatus(ip: string, varsCfg: VarsConfig) {
     "RoomTempAct_Val",
     "RoomTemp.ReadVal",
     "SupplyTemp.ReadVal",
-    "ReturnTemp.ReadVal",
+    "RetTemp.ReadVal",
+    "WinSum.ReadVal",
   );
   const keys: string[] = [];
   if (varsCfg.PowerFb) keys.push(varsCfg.PowerFb);
@@ -575,6 +776,41 @@ async function readStatus(ip: string, varsCfg: VarsConfig) {
       mode = String(raw ?? "");
     }
   }
+
+  let season: "winter" | "summer" | null = null;
+try {
+  // اول سعی کن با WinSum بخون
+  season = await readWinSum(ip, varsCfg);
+  
+  // اگه WinSum جواب نداد، برو سراغ روش قدیمی
+  if (season === null) {
+    const cached = getSeasonCache(ip);
+    const lists = await detectSeasonCandidateLists(ip);
+    const queue: string[] = [];
+    if (cached?.fb) queue.push(cached.fb);
+    if (varsCfg && varsCfg.SeasonFb) queue.push(varsCfg.SeasonFb);
+    queue.push(...lists.fb);
+    queue.push(...lists.cmd);
+    queue.push(...lists.all);
+    const seen = new Set<string>();
+    const vars = queue.filter((n) => {
+      const v = String(n || "").trim();
+      if (!v || seen.has(v)) return false;
+      seen.add(v);
+      return true;
+    });
+    for (const sn of vars) {
+      const rv = await readVar(ip, sn);
+      const cur = toSeasonWithMap(rv, cached?.map);
+      if (cur) {
+        season = cur;
+        setSeasonCache(ip, { fb: sn });
+        break;
+      }
+    }
+  }
+} catch {
+}
   const alarmActive =
     varsCfg.AlarmActive && Object.prototype.hasOwnProperty.call(resp, varsCfg.AlarmActive)
       ? toBool(resp[varsCfg.AlarmActive])
@@ -604,6 +840,7 @@ async function readStatus(ip: string, varsCfg: VarsConfig) {
     fanSpeed,
     alarmActive,
     mode,
+    season,
   };
 }
 
@@ -693,6 +930,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "write_failed" }, { status: 502 });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "season") {
+    if (!user || !(user.permissions?.canTogglePower)) {
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    }
+    const m = typeof body.season === "string" ? body.season.toLowerCase() : "";
+    const desired = m === "winter" ? "winter" : m === "summer" ? "summer" : "";
+    if (!desired) {
+      return NextResponse.json({ ok: false, error: "bad_value" }, { status: 400 });
+    }
+    try {
+      const res = await applySeason(ip, desired as "winter" | "summer", varsCfg);
+      if (!res || !res.ok) {
+        return NextResponse.json({ ok: false, error: "write_failed" }, { status: 502 });
+      }
+      return NextResponse.json({ ok: true, season: res.season ?? null });
+    } catch {
+      return NextResponse.json({ ok: false, error: "write_failed" }, { status: 502 });
+    }
   }
 
   if (kind === "setpoint") {

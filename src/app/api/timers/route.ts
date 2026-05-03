@@ -35,7 +35,7 @@ async function runDueTimersOnce() {
   const baseUrl =
     globalForTimers.timersBaseUrl ||
     process.env.TIMER_BASE_URL ||
-    "http://127.0.0.1:3000";
+    "http://10.61.44.10:3000";
   const token = createSession("timer-bot", "manager");
   for (const item of due as TimerItem[]) {
     try {

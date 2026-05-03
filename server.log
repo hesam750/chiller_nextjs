@@ -1,0 +1,42 @@
+nohup: ignoring input
+▲ Next.js 16.1.1
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+
+✓ Starting...
+✓ Ready in 199ms
+Timer POST request body: {
+  chillerName: 'THT',
+  chillerIp: '10.61.44.59',
+  mode: 'on',
+  hours: 11.9806325,
+  targetAt: '2026-01-05T03:17:00.000Z'
+}
+Timer POST request body: {
+  chillerName: 'سالن رول ',
+  chillerIp: '10.61.44.55',
+  mode: 'on',
+  hours: 12.345511111111112,
+  targetAt: '2026-01-07T15:35:00.000Z'
+}
+Timer POST request body: {
+  chillerName: 'سالن رول ',
+  chillerIp: '10.61.44.55',
+  mode: 'on',
+  hours: 0.3387177777777778,
+  targetAt: '2026-01-07T03:35:00.000Z'
+}
+Timer POST request body: {
+  chillerName: 'سالن رول ',
+  chillerIp: '10.61.44.55',
+  mode: 'on',
+  hours: 0.33387944444444445,
+  targetAt: '2026-01-07T03:35:00.000Z'
+}
+Timer POST request body: {
+  chillerName: 'سالن رول ',
+  chillerIp: '10.61.44.55',
+  mode: 'on',
+  hours: 0.32626166666666667,
+  targetAt: '2026-01-07T03:35:00.000Z'
+}

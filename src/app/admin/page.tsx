@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WithAccess } from "@/app/_components/rbac";
+import { WithAccess } from "../_components/rbac";
 import { useI18n } from "@/app/_components/i18n";
 import { AdminChillerStats } from "@/app/admin/_components/AdminChillerStats";
 import { AdminAddChillerSection } from "@/app/admin/_components/AdminAddChillerSection";
 import fanapLogo from "../../../fanap.png";
 import Image from "next/image";
-import { LogsPanel } from "@/app/admin/_components/LogsPanel";
 import { AdminPdgPanel } from "@/app/admin/_components/AdminPdgPanel";
 import { ChillerCard } from "@/app/admin/_components/ChillerCard";
 import { LanguageSwitcher } from "@/app/_components/LanguageSwitcher";
+import { LogsPanel } from "./_components/LogsPanel";
+import { AdminTabsModal } from "@/app/admin/_components/AdminTabsModal";
+import { TabItem } from "@/lib/db";
 
 type Chiller = {
   id: string;
@@ -90,6 +92,8 @@ export default function AdminPage() {
   const [activityUserFilter, setActivityUserFilter] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityLimit, setActivityLimit] = useState(50);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false); // New state for tabs modal
   const { t } = useI18n();
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
@@ -635,15 +639,15 @@ export default function AdminPage() {
       <header
         className={
           theme === "dark"
-            ? "flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950"
-            : "flex items-center justify-between px-6 py-3 border-b border-[#e6edf7] bg-[#f9fafb]"
+            ? "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-6 py-3 border-b border-slate-800 bg-slate-950"
+            : "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-6 py-3 border-b border-[#e6edf7] bg-[#f9fafb]"
         }
       >
         <div className="flex items-center gap-2">
           <Image src={fanapLogo} alt="Fanap" className="h-6 w-auto" />
           <strong className="text-sm">{t("admin.header.title")}</strong>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
           <a
             href="/dashboard"
             className={
@@ -667,6 +671,19 @@ export default function AdminPage() {
               {t("admin.users.manage")}
             </button>
           )}
+          <WithAccess anyRoles={["admin"]} anyPerms={["canManageTabs"]} loadingFallback={<div>Loading...</div>}>
+            <button
+              type="button"
+              onClick={() => setManageTabsModalOpen(true)}
+              className={
+                theme === "dark"
+                  ? "rounded-lg bg-green-500 px-3 py-1 text-xs font-semibold text-white hover:bg-green-600"
+                  : "rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
+              }
+            >
+              {t("admin.tabs.manage")}
+            </button>
+          </WithAccess>
           <button
             type="button"
             onClick={() =>
@@ -874,35 +891,37 @@ export default function AdminPage() {
             }
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-              <h2 className="text-sm font-semibold">{t("admin.activity.title")}</h2>
               <div className="flex items-center gap-2">
-                <input
-                  value={activityUserFilter}
-                  onChange={(e) => {
-                    setActivityUserFilter(e.target.value);
-                    setActivityLimit(50);
-                  }}
-                  placeholder={t("admin.activity.filter.placeholder")}
-                  className={
-                    theme === "dark"
-                      ? "rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
-                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivityUserFilter("");
-                    setActivityLimit(50);
-                  }}
-                  className={
-                    theme === "dark"
-                      ? "rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
-                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
-                  }
-                >
-                  {t("admin.activity.filter.clear")}
-                </button>
+                <h2 className="text-sm font-semibold">{t("admin.activity.title")}</h2>
+                {activityLogs.length > 5 && (
+                  <span
+                    className={
+                      theme === "dark"
+                        ? "rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300"
+                        : "rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"
+                    }
+                  >
+                    {activityLogs.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {activityLogs.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivityLimit(2000);
+                      setActivityModalOpen(true);
+                    }}
+                    className={
+                      theme === "dark"
+                        ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-100"
+                        : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800"
+                    }
+                  >
+                    {t("admin.activity.more")}
+                  </button>
+                )}
               </div>
             </div>
             {activityLogs.length === 0 ? (
@@ -918,7 +937,7 @@ export default function AdminPage() {
             ) : (
               <>
               <ul className="space-y-2">
-                {activityLogs.map((a) => {
+                {activityLogs.slice(0, 5).map((a) => {
                 const atText = new Date(a.at).toLocaleString(
                   typeof document !== "undefined"
                     ? (document.documentElement.getAttribute("lang") === "en"
@@ -980,24 +999,151 @@ export default function AdminPage() {
                 );
                 })}
               </ul>
-              <div className="mt-3 flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => setActivityLimit((n) => Math.min(2000, n + 50))}
-                  disabled={activityLoading}
-                  className={
-                    theme === "dark"
-                      ? "rounded-lg border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-100 disabled:opacity-50"
-                      : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-800 disabled:opacity-50"
-                  }
-                >
-                  {t("admin.activity.more")}
-                </button>
-              </div>
               </>
             )}
           </section>
         </WithAccess>
+        {activityModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3">
+            <div
+              className={
+                theme === "dark"
+                  ? "w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-950 p-5 shadow-2xl"
+                  : "w-full max-w-2xl rounded-2xl border border-slate-300 bg-white p-5 shadow-2xl"
+              }
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{t("admin.activity.title")}</h3>
+                  <span
+                    className={
+                      theme === "dark"
+                        ? "rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300"
+                        : "rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"
+                    }
+                  >
+                    {activityLogs.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActivityModalOpen(false)}
+                  className={
+                    theme === "dark"
+                      ? "rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200"
+                      : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700"
+                  }
+                >
+                  {t("modal.close")}
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <input
+                  value={activityUserFilter}
+                  onChange={(e) => {
+                    setActivityUserFilter(e.target.value);
+                    setActivityLimit(2000);
+                  }}
+                  placeholder={t("admin.activity.filter.placeholder")}
+                  className={
+                    theme === "dark"
+                      ? "rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivityUserFilter("");
+                    setActivityLimit(2000);
+                  }}
+                  className={
+                    theme === "dark"
+                      ? "rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      : "rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-800"
+                  }
+                >
+                  {t("admin.activity.filter.clear")}
+                </button>
+              </div>
+              {activityLogs.length === 0 ? (
+                <div
+                  className={
+                    theme === "dark"
+                      ? "rounded-xl border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-500"
+                      : "rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-xs text-slate-500 bg-white"
+                  }
+                >
+                  {activityLoading ? t("admin.activity.loading") : t("admin.activity.empty")}
+                </div>
+              ) : (
+                <ul className="space-y-2 max-h-[60vh] overflow-auto pr-1">
+                  {activityLogs.map((a) => {
+                  const atText = new Date(a.at).toLocaleString(
+                    typeof document !== "undefined"
+                      ? (document.documentElement.getAttribute("lang") === "en"
+                          ? "en-US"
+                          : document.documentElement.getAttribute("lang") === "ar"
+                            ? "ar"
+                            : "fa-IR")
+                      : "fa-IR",
+                  );
+                  const title =
+                    a.action === "user.create"
+                      ? t("action.user.create")
+                      : a.action === "user.update"
+                        ? t("action.user.update")
+                        : a.action === "user.deactivate"
+                          ? t("action.user.deactivate")
+                          : a.action === "user.delete"
+                            ? t("action.user.delete")
+                            : a.action === "auth.login"
+                              ? t("action.auth.login")
+                            : a.action === "chiller.create"
+                              ? t("action.chiller.create")
+                              : a.action === "chiller.update"
+                                ? t("action.chiller.update")
+                                : a.action === "chiller.delete"
+                                  ? t("action.chiller.delete")
+                                  : a.action === "settings.update_global"
+                                    ? t("action.settings.update_global")
+                                    : a.action === "settings.update_chiller"
+                                      ? t("action.settings.update_chiller")
+                                      : a.action;
+                  const d = a.details as Record<string, unknown> | undefined;
+                  const detailText =
+                    d && typeof d.target === "string"
+                      ? String(d.target)
+                      : d && typeof d.name === "string"
+                        ? String(d.name)
+                        : "";
+                  return (
+                    <li
+                      key={a.id}
+                      className={
+                        theme === "dark"
+                          ? "rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs"
+                          : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                      }
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{title}</span>
+                          {detailText && <span className="text-slate-400">{detailText}</span>}
+                        </div>
+                        <span className="ltr text-slate-400">{atText}</span>
+                      </div>
+                      <div className="mt-1 text-slate-400">
+                        {t("admin.activity.by")} <span className="font-semibold">{a.username}</span>
+                      </div>
+                    </li>
+                  );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
         {toast && toastVisible && (
           <div
             className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl text-sm sm:text-base shadow-2xl z-50 max-w-[90%] sm:max-w-xl text-center ${
@@ -1562,6 +1708,7 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+      {manageTabsModalOpen && <AdminTabsModal isOpen={manageTabsModalOpen} onClose={() => setManageTabsModalOpen(false)} />}
     </div>
   );
 }

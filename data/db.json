@@ -1,58 +1,758 @@
 {
-  "powerLogs": [],
+  "powerLogs": [
+    {
+      "id": "f90e15e34f008d2a",
+      "unitName": "تست 9",
+      "action": "off",
+      "at": "2026-04-26T12:50:28.620Z",
+      "user": "حسام"
+    },
+    {
+      "id": "fd414c4f4e65a885",
+      "unitName": "تست 9",
+      "action": "off",
+      "at": "2026-04-26T09:52:56.073Z",
+      "user": "حسام"
+    },
+    {
+      "id": "7923665adf16f8fe",
+      "unitName": "تست 9",
+      "action": "off",
+      "at": "2026-04-25T13:14:55.597Z",
+      "user": "حسام"
+    },
+    {
+      "id": "7d3cc23ece23f872",
+      "unitName": "تست 3",
+      "action": "on",
+      "at": "2026-04-25T10:35:04.634Z",
+      "user": "حسام"
+    },
+    {
+      "id": "2cf2cd4af653c3a7",
+      "unitName": "تست 3",
+      "action": "off",
+      "at": "2026-04-25T10:33:42.592Z",
+      "user": "حسام"
+    },
+    {
+      "id": "cfc409997793fa59",
+      "unitName": "تست 3",
+      "action": "on",
+      "at": "2026-04-23T12:17:00.982Z",
+      "user": "حسام"
+    },
+    {
+      "id": "0408306c30007e00",
+      "unitName": "تست 3",
+      "action": "off",
+      "at": "2026-04-23T12:15:44.750Z",
+      "user": "حسام"
+    }
+  ],
   "activityLogs": [
     {
-      "id": "e5641f26ee7ac0bd",
+      "id": "048a8e09a5506940",
       "username": "حسام",
       "action": "auth.login",
-      "at": "2026-02-07T17:07:09.233Z"
+      "at": "2026-05-03T13:53:44.833Z"
     },
     {
-      "id": "6eb88b076b54d119",
-      "username": "تست",
-      "action": "auth.logout",
-      "at": "2026-02-07T17:07:06.185Z"
-    },
-    {
-      "id": "dc90df650c489d5a",
-      "username": "تست",
+      "id": "b383c698fde65b16",
+      "username": "حسام",
       "action": "auth.login",
-      "at": "2026-02-07T16:50:10.543Z"
+      "at": "2026-05-02T21:22:26.396Z"
     },
     {
-      "id": "e6fb36559cb1a695",
+      "id": "291a6288d629e0ec",
       "username": "حسام",
-      "action": "auth.logout",
-      "at": "2026-02-07T16:49:52.229Z"
+      "action": "auth.login",
+      "at": "2026-05-02T13:31:22.225Z"
     },
     {
-      "id": "db08f903896306fd",
+      "id": "d6fea7afd2a95a34",
       "username": "حسام",
-      "action": "user.update",
-      "at": "2026-02-07T16:49:48.363Z",
+      "action": "auth.login",
+      "at": "2026-04-28T10:41:54.721Z"
+    },
+    {
+      "id": "5a040abaac1245b9",
+      "username": "حسام",
+      "action": "timer.deactivate",
+      "at": "2026-04-26T12:57:29.429Z",
       "details": {
-        "target": "تست",
-        "role": "admin",
+        "chillerIp": "10.61.44.60"
+      }
+    },
+    {
+      "id": "85a5f00d1e1c7706",
+      "username": "حسام",
+      "action": "timer.add",
+      "at": "2026-04-26T12:57:14.491Z",
+      "details": {
+        "chillerIp": "10.61.44.60",
+        "mode": "on",
+        "hours": 16
+      }
+    },
+    {
+      "id": "c6ae2bde6a6cc2b5",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-26T12:50:28.635Z",
+      "details": {
+        "unitName": "تست 9",
+        "action": "off"
+      }
+    },
+    {
+      "id": "521682f6986a738b",
+      "username": "حسام",
+      "action": "timer.add",
+      "at": "2026-04-26T12:46:04.202Z",
+      "details": {
+        "chillerIp": "10.61.44.60",
+        "mode": "off",
+        "hours": 16
+      }
+    },
+    {
+      "id": "0790354d2e46391b",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-26T12:44:49.545Z"
+    },
+    {
+      "id": "1a060c680cabfafe",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-26T12:44:41.093Z"
+    },
+    {
+      "id": "b9b353a18c4f6def",
+      "username": "حسام",
+      "action": "timer.deactivate",
+      "at": "2026-04-26T11:37:02.427Z",
+      "details": {
+        "chillerIp": "10.61.44.60"
+      }
+    },
+    {
+      "id": "df6aff41bd964903",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-26T11:36:14.803Z"
+    },
+    {
+      "id": "610bb776eeed632c",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-26T09:52:56.083Z",
+      "details": {
+        "unitName": "تست 9",
+        "action": "off"
+      }
+    },
+    {
+      "id": "5a8970f21d7e9db7",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-26T08:57:16.938Z"
+    },
+    {
+      "id": "5291b1c90766ecb3",
+      "username": "حسام",
+      "action": "timer.add",
+      "at": "2026-04-26T08:52:44.113Z",
+      "details": {
+        "chillerIp": "10.61.44.60",
+        "mode": "off",
+        "hours": 0.9887616666666666
+      }
+    },
+    {
+      "id": "8b4e7a616021058b",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-26T06:08:18.523Z"
+    },
+    {
+      "id": "0139dd9e20c63198",
+      "username": "حسام",
+      "action": "timer.deactivate",
+      "at": "2026-04-25T13:27:56.987Z",
+      "details": {
+        "chillerIp": "10.61.44.60"
+      }
+    },
+    {
+      "id": "aac3b5fda1664d65",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-25T13:14:55.614Z",
+      "details": {
+        "unitName": "تست 9",
+        "action": "off"
+      }
+    },
+    {
+      "id": "dedad4be782d34ee",
+      "username": "حسام",
+      "action": "timer.add",
+      "at": "2026-04-25T13:07:04.643Z",
+      "details": {
+        "chillerIp": "10.61.44.60",
+        "mode": "off",
+        "hours": 24.971135833333335
+      }
+    },
+    {
+      "id": "d18c6a0dae6d88c3",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-25T10:35:04.643Z",
+      "details": {
+        "unitName": "تست 3",
+        "action": "on"
+      }
+    },
+    {
+      "id": "7919025a9146dfc7",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-25T10:33:42.608Z",
+      "details": {
+        "unitName": "تست 3",
+        "action": "off"
+      }
+    },
+    {
+      "id": "eea6afa2af7f51a0",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-25T10:33:07.871Z"
+    },
+    {
+      "id": "a6c4003b00cee56c",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-25T07:38:13.981Z"
+    },
+    {
+      "id": "efa4e7d6d6e9ed7a",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-23T12:25:48.867Z"
+    },
+    {
+      "id": "c5dffbb0b3ff2284",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-23T12:17:00.995Z",
+      "details": {
+        "unitName": "تست 3",
+        "action": "on"
+      }
+    },
+    {
+      "id": "15b2ce303160871c",
+      "username": "حسام",
+      "action": "power.toggle",
+      "at": "2026-04-23T12:15:44.765Z",
+      "details": {
+        "unitName": "تست 3",
+        "action": "off"
+      }
+    },
+    {
+      "id": "47e7c4286db71eed",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-23T11:11:57.427Z"
+    },
+    {
+      "id": "2041ec23dd13fc2c",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-23T11:00:06.770Z"
+    },
+    {
+      "id": "920ee411e967e12a",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-23T10:57:58.984Z"
+    },
+    {
+      "id": "05e41250e0b49d84",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-23T10:51:15.724Z"
+    },
+    {
+      "id": "cb6439e0e2ed7338",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:24.994Z",
+      "details": {
+        "id": "9243f2dd6291416c",
+        "patch": {
+          "name": "تست",
+          "ip": "10.61.44.52",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "978f7f7c8d6e1bb9",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:23.952Z",
+      "details": {
+        "id": "ae5f1d90aa57a2d4",
+        "patch": {
+          "name": "smt",
+          "ip": "10.61.44.58",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "15deb22fbdcd967d",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:22.005Z",
+      "details": {
+        "id": "23344d883d5d22cc",
+        "patch": {
+          "name": "تست 2",
+          "ip": "10.61.44.53",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "8106a4351268ad4f",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:20.676Z",
+      "details": {
+        "id": "da790ee2540b284d",
+        "patch": {
+          "name": "تست 5",
+          "ip": "10.61.44.56",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "f3d3f94202249910",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:18.750Z",
+      "details": {
+        "id": "9329a67ee5666f80",
+        "patch": {
+          "name": "تست 4",
+          "ip": "10.61.44.55",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "7cc49adf69307d65",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:17.472Z",
+      "details": {
+        "id": "0f8f125bc95b6744",
+        "patch": {
+          "name": "تست 3",
+          "ip": "10.61.44.54",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "fe9052684f042845",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:15.954Z",
+      "details": {
+        "id": "7652ca244b063fd4",
+        "patch": {
+          "name": "تست 8",
+          "ip": "10.61.44.59",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "45d99eaf3b220940",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:13.353Z",
+      "details": {
+        "id": "fd1016c093ef861d",
+        "patch": {
+          "name": "تست 7",
+          "ip": "10.61.44.58",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "0d3589f9149f962e",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:12.239Z",
+      "details": {
+        "id": "662d2edd283ff2c4",
+        "patch": {
+          "name": "تست 6",
+          "ip": "10.61.44.57",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "7760585bb1d287f6",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:10.752Z",
+      "details": {
+        "id": "662d2edd283ff2c4",
+        "patch": {
+          "name": "تست 6",
+          "ip": "10.61.44.57",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "6634ef1775b10f1b",
+      "username": "حسام",
+      "action": "chiller.update",
+      "at": "2026-04-23T05:55:09.035Z",
+      "details": {
+        "id": "862d76ee4148f6be",
+        "patch": {
+          "name": "تست 9",
+          "ip": "10.61.44.60",
+          "active": true
+        }
+      }
+    },
+    {
+      "id": "915d4958db112c63",
+      "username": "حسام",
+      "action": "chiller.delete",
+      "at": "2026-04-23T05:55:03.692Z",
+      "details": {
+        "id": "7b3bd73736aafa83"
+      }
+    },
+    {
+      "id": "e45a197cb1b36cb8",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-22T15:25:28.182Z"
+    },
+    {
+      "id": "78d84445064dcdca",
+      "username": "تست",
+      "action": "auth.logout",
+      "at": "2026-04-22T15:25:19.960Z"
+    },
+    {
+      "id": "91122bfbe5bf4eac",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-22T14:08:25.895Z"
+    },
+    {
+      "id": "e57eaa14844b7159",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-22T13:12:03.761Z"
+    },
+    {
+      "id": "79017d499c36dc3f",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T21:59:29.051Z"
+    },
+    {
+      "id": "a3945f6f0cead077",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T16:29:49.187Z"
+    },
+    {
+      "id": "a11aff5b895c8686",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T15:36:10.183Z"
+    },
+    {
+      "id": "d1f929cb9c6709d4",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T15:15:00.881Z"
+    },
+    {
+      "id": "9b494f5c36911724",
+      "username": "تست",
+      "action": "auth.logout",
+      "at": "2026-04-21T15:08:01.227Z"
+    },
+    {
+      "id": "8e0f7ecbfd6ae475",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T13:47:50.617Z"
+    },
+    {
+      "id": "418db4a849ef4b83",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:45:32.700Z",
+      "details": {
+        "chillerId": "7b3bd73736aafa83",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "eb0684f13baddc99",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:45:32.668Z",
+      "details": {
+        "id": "7b3bd73736aafa83",
+        "name": "تست 10",
+        "ip": "321548/7925135",
         "active": true
       }
     },
     {
-      "id": "ec1fa6b9c246a065",
-      "username": "حسام",
-      "action": "auth.login",
-      "at": "2026-02-07T16:49:28.631Z"
+      "id": "783a9f929b8bbf47",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:45:25.084Z",
+      "details": {
+        "chillerId": "862d76ee4148f6be",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
     },
     {
-      "id": "efcaa950c383f4e7",
+      "id": "0196ed2798fd6109",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:45:25.053Z",
+      "details": {
+        "id": "862d76ee4148f6be",
+        "name": "تست 9",
+        "ip": "517862132645",
+        "active": true
+      }
+    },
+    {
+      "id": "4961150e16b15c34",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:45:17.051Z",
+      "details": {
+        "chillerId": "7652ca244b063fd4",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "65586d56602a989c",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:45:17.028Z",
+      "details": {
+        "id": "7652ca244b063fd4",
+        "name": "تست 8",
+        "ip": "31328789",
+        "active": true
+      }
+    },
+    {
+      "id": "e98e715f56db4d1a",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:45:10.707Z",
+      "details": {
+        "chillerId": "fd1016c093ef861d",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "3535f0f8b816ef51",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:45:10.676Z",
+      "details": {
+        "id": "fd1016c093ef861d",
+        "name": "تست 7",
+        "ip": "3216589798.0",
+        "active": true
+      }
+    },
+    {
+      "id": "d4475889832e4f7d",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:45:04.241Z",
+      "details": {
+        "chillerId": "662d2edd283ff2c4",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "36dbc9f33e28013f",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:45:04.220Z",
+      "details": {
+        "id": "662d2edd283ff2c4",
+        "name": "تست 6",
+        "ip": "3216649855",
+        "active": true
+      }
+    },
+    {
+      "id": "b8161e1ccf6febcd",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:44:57.075Z",
+      "details": {
+        "chillerId": "da790ee2540b284d",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "d3f960d6c99810cc",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:44:57.035Z",
+      "details": {
+        "id": "da790ee2540b284d",
+        "name": "تست 5",
+        "ip": "6548975132",
+        "active": true
+      }
+    },
+    {
+      "id": "114f2cd3d6e28238",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:44:50.117Z",
+      "details": {
+        "chillerId": "9329a67ee5666f80",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "4fdfccb7e5a6af9a",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:44:50.091Z",
+      "details": {
+        "id": "9329a67ee5666f80",
+        "name": "تست 4",
+        "ip": "35465846532",
+        "active": true
+      }
+    },
+    {
+      "id": "33fdf567990bac87",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:44:42.173Z",
+      "details": {
+        "chillerId": "0f8f125bc95b6744",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "f32ba4b47971fd43",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:44:42.140Z",
+      "details": {
+        "id": "0f8f125bc95b6744",
+        "name": "تست 3",
+        "ip": "5648698",
+        "active": true
+      }
+    },
+    {
+      "id": "8fdbcf085c7e872b",
+      "username": "تست",
+      "action": "settings.update_chiller",
+      "at": "2026-04-21T13:44:35.370Z",
+      "details": {
+        "chillerId": "23344d883d5d22cc",
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    },
+    {
+      "id": "c4d738b8a2e254c0",
+      "username": "تست",
+      "action": "chiller.create",
+      "at": "2026-04-21T13:44:35.333Z",
+      "details": {
+        "id": "23344d883d5d22cc",
+        "name": "تست 2",
+        "ip": "1233654",
+        "active": true
+      }
+    },
+    {
+      "id": "8d2ea2350ae6f52c",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-21T13:44:13.765Z"
+    },
+    {
+      "id": "d4842ea6cb9cc660",
       "username": "حسام",
       "action": "auth.logout",
-      "at": "2026-02-07T16:48:55.868Z"
+      "at": "2026-04-21T13:43:46.172Z"
     },
     {
-      "id": "3579abaccbd8bfe8",
+      "id": "078ee3b1f560e2e7",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-21T12:43:06.686Z"
+    },
+    {
+      "id": "c80e3fc6798fdc87",
+      "username": "تست",
+      "action": "auth.login",
+      "at": "2026-04-20T14:54:50.817Z"
+    },
+    {
+      "id": "27f870503688ffab",
+      "username": "حسام",
+      "action": "auth.logout",
+      "at": "2026-04-20T14:54:42.600Z"
+    },
+    {
+      "id": "b28b4fdbc9694143",
       "username": "حسام",
       "action": "user.create",
-      "at": "2026-02-07T16:48:51.054Z",
+      "at": "2026-04-20T14:54:38.167Z",
       "details": {
         "target": "تست",
         "role": "admin",
@@ -60,28 +760,100 @@
       }
     },
     {
-      "id": "f9886d38827cd2f1",
+      "id": "0a78162e73e5b563",
       "username": "حسام",
-      "action": "auth.login",
-      "at": "2026-02-07T16:47:30.660Z"
+      "action": "user.delete",
+      "at": "2026-04-20T14:54:23.846Z",
+      "details": {
+        "target": "تست"
+      }
     },
     {
-      "id": "3435f12c7651e74a",
+      "id": "0f63c178955e7e7d",
       "username": "حسام",
       "action": "auth.login",
-      "at": "2026-02-07T16:47:01.451Z"
+      "at": "2026-04-20T14:53:51.395Z"
     },
     {
-      "id": "efb3386766c8f757",
+      "id": "5f25eb67e7326ab1",
       "username": "حسام",
       "action": "auth.login",
-      "at": "2026-02-07T11:16:41.501Z"
+      "at": "2026-04-20T14:53:01.991Z"
     },
     {
-      "id": "2de421a216aa7daf",
-      "username": "حسین-کارجو",
-      "action": "auth.logout",
-      "at": "2026-02-07T11:16:26.673Z"
+      "id": "0d73584066d0522f",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-20T14:52:41.768Z"
+    },
+    {
+      "id": "7bc740eac537582e",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-20T14:11:29.619Z"
+    },
+    {
+      "id": "478d9d7ea4b404ad",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-20T13:49:37.602Z"
+    },
+    {
+      "id": "a00fecc0d83ae0b7",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-19T21:15:14.551Z"
+    },
+    {
+      "id": "5691a685aec2fc19",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-19T08:28:20.903Z"
+    },
+    {
+      "id": "1a2a22f71063a421",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-19T07:36:20.847Z"
+    },
+    {
+      "id": "4db7e78e0dc89b9d",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-19T07:36:05.815Z"
+    },
+    {
+      "id": "6799d1b38e299f2b",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-05T10:59:00.137Z"
+    },
+    {
+      "id": "2f646893a7617736",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-05T10:31:55.032Z"
+    },
+    {
+      "id": "a134a42ad3fddc91",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-04-05T10:14:11.001Z"
+    },
+    {
+      "id": "cdadfb7771371c26",
+      "username": "حسام",
+      "action": "chiller.delete",
+      "at": "2026-03-19T14:39:39.594Z",
+      "details": {
+        "id": "f2734da2e667c274"
+      }
+    },
+    {
+      "id": "eda90dea57c06573",
+      "username": "حسام",
+      "action": "auth.login",
+      "at": "2026-03-19T14:39:06.758Z"
     }
   ],
   "users": [
@@ -106,7 +878,7 @@
     },
     {
       "username": "تست",
-      "passwordHash": "ffa4cce2708c0be25514e656f063de83e35288ea7d2939cafdaa65ac9ebacf95",
+      "passwordHash": "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225",
       "role": "admin",
       "active": true,
       "permissions": {
@@ -123,11 +895,179 @@
       }
     }
   ],
-  "chillers": [],
-  "timers": [],
+  "chillers": [
+    {
+      "id": "9243f2dd6291416c",
+      "name": "تست",
+      "ip": "10.61.44.52",
+      "active": true,
+      "createdAt": "2026-02-12T08:23:26.520Z",
+      "updatedAt": "2026-04-23T05:55:24.991Z"
+    },
+    {
+      "id": "ae5f1d90aa57a2d4",
+      "name": "smt",
+      "ip": "10.61.44.58",
+      "active": true,
+      "createdAt": "2026-02-15T11:55:54.107Z",
+      "updatedAt": "2026-04-23T05:55:23.949Z"
+    },
+    {
+      "id": "23344d883d5d22cc",
+      "name": "تست 2",
+      "ip": "10.61.44.53",
+      "active": true,
+      "createdAt": "2026-04-21T13:44:35.328Z",
+      "updatedAt": "2026-04-23T05:55:22.001Z"
+    },
+    {
+      "id": "0f8f125bc95b6744",
+      "name": "تست 3",
+      "ip": "10.61.44.54",
+      "active": true,
+      "createdAt": "2026-04-21T13:44:42.136Z",
+      "updatedAt": "2026-04-23T05:55:17.469Z"
+    },
+    {
+      "id": "9329a67ee5666f80",
+      "name": "تست 4",
+      "ip": "10.61.44.55",
+      "active": true,
+      "createdAt": "2026-04-21T13:44:50.085Z",
+      "updatedAt": "2026-04-23T05:55:18.748Z"
+    },
+    {
+      "id": "da790ee2540b284d",
+      "name": "تست 5",
+      "ip": "10.61.44.56",
+      "active": true,
+      "createdAt": "2026-04-21T13:44:57.032Z",
+      "updatedAt": "2026-04-23T05:55:20.673Z"
+    },
+    {
+      "id": "662d2edd283ff2c4",
+      "name": "تست 6",
+      "ip": "10.61.44.57",
+      "active": true,
+      "createdAt": "2026-04-21T13:45:04.217Z",
+      "updatedAt": "2026-04-23T05:55:12.235Z"
+    },
+    {
+      "id": "fd1016c093ef861d",
+      "name": "تست 7",
+      "ip": "10.61.44.58",
+      "active": true,
+      "createdAt": "2026-04-21T13:45:10.674Z",
+      "updatedAt": "2026-04-23T05:55:13.349Z"
+    },
+    {
+      "id": "7652ca244b063fd4",
+      "name": "تست 8",
+      "ip": "10.61.44.59",
+      "active": true,
+      "createdAt": "2026-04-21T13:45:17.025Z",
+      "updatedAt": "2026-04-23T05:55:15.950Z"
+    },
+    {
+      "id": "862d76ee4148f6be",
+      "name": "تست 9",
+      "ip": "10.61.44.60",
+      "active": true,
+      "createdAt": "2026-04-21T13:45:25.048Z",
+      "updatedAt": "2026-04-23T05:55:09.030Z"
+    }
+  ],
+  "timers": [
+    {
+      "id": "fd3625f67501f7ca",
+      "chillerName": "تست 9",
+      "chillerIp": "10.61.44.60",
+      "mode": "off",
+      "hours": 24.971135833333335,
+      "targetAt": "2026-04-26T14:05:00.000Z",
+      "active": false,
+      "createdAt": "2026-04-25T13:07:04.604Z",
+      "updatedAt": "2026-04-25T13:27:56.973Z"
+    },
+    {
+      "id": "6d56a113d5d6bf28",
+      "chillerName": "تست 9",
+      "chillerIp": "10.61.44.60",
+      "mode": "off",
+      "hours": 0.9887616666666666,
+      "targetAt": "2026-04-26T09:52:00.000Z",
+      "active": false,
+      "createdAt": "2026-04-26T08:52:44.094Z",
+      "updatedAt": "2026-04-26T11:37:02.413Z"
+    },
+    {
+      "id": "6a49defdc883008d",
+      "chillerName": "تست 9",
+      "chillerIp": "10.61.44.60",
+      "mode": "off",
+      "hours": 16,
+      "targetAt": "2026-04-26T12:50:00.000Z",
+      "active": false,
+      "createdAt": "2026-04-26T12:46:04.185Z",
+      "updatedAt": "2026-04-26T12:57:29.422Z"
+    },
+    {
+      "id": "360ad6b38c045b2d",
+      "chillerName": "تست 9",
+      "chillerIp": "10.61.44.60",
+      "mode": "on",
+      "hours": 16,
+      "targetAt": "2026-04-26T13:20:00.000Z",
+      "active": false,
+      "createdAt": "2026-04-26T12:57:14.477Z",
+      "updatedAt": "2026-04-26T12:57:29.422Z"
+    }
+  ],
   "settings": {
     "progressOnSeconds": 60,
     "progressOffSeconds": 60,
-    "byChiller": {}
-  }
+    "byChiller": {
+      "9243f2dd6291416c": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "ae5f1d90aa57a2d4": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "23344d883d5d22cc": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "0f8f125bc95b6744": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "9329a67ee5666f80": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "da790ee2540b284d": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "662d2edd283ff2c4": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "fd1016c093ef861d": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "7652ca244b063fd4": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      },
+      "862d76ee4148f6be": {
+        "progressOnSeconds": 60,
+        "progressOffSeconds": 60
+      }
+    }
+  },
+  "tabs": []
 }

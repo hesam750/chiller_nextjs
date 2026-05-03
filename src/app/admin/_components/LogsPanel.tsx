@@ -12,13 +12,14 @@ type PowerSession = {
 
 type Props = {
   theme: "dark" | "light";
-  sessions: PowerSession[];
-  now: number;
+  sessions?: PowerSession[];
+  now?: number;
 };
 
-export function LogsPanel({ theme, sessions, now }: Props) {
+export function LogsPanel({ theme, sessions = [], now = Date.now() }: Props) {
   const { locale, t } = useI18n();
   const dateLocale = locale === "fa" ? "fa-IR" : locale === "ar" ? "ar" : "en-US";
+
   const formatDuration = (ms: number | undefined) => {
     if (!ms || ms <= 0) return "";
     const totalSeconds = Math.floor(ms / 1000);

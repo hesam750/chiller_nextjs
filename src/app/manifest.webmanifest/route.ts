@@ -6,6 +6,7 @@ export async function GET(_req: NextRequest) {
     short_name: "Chiller",
     start_url: "/",
     display: "standalone",
+    display_override: ["standalone"],
     orientation: "portrait",
     background_color: "#020617",
     theme_color: "#0ea5e9",
@@ -15,7 +16,13 @@ export async function GET(_req: NextRequest) {
     icons: [
       {
         src: "/icons/icon.svg",
-        sizes: "any",
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable",
+      },
+      {
+        src: "/icons/icon.svg",
+        sizes: "512x512",
         type: "image/svg+xml",
         purpose: "any maskable",
       },

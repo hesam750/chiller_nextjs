@@ -17,6 +17,7 @@
      "login.error": "خطا در ارتباط با سرور",
      "login.loading": "در حال ورود...",
      "login.submit": "ورود",
+     
  
      "lang.fa": "فارسی",
      "lang.ar": "العربية",
@@ -297,7 +298,7 @@
    },
  };
 
-// Admin/User management and CRUD feedback
+// Admin
 dicts.fa = {
   ...dicts.fa,
   "err.list.fetch": "خطا در دریافت لیست",
@@ -440,7 +441,7 @@ dicts.en = {
   "err.user.activate": "Error activating user"
 };
  
- // Common app-level keys
+ // app-level keys
  dicts.fa = {
    ...dicts.fa,
    "admin.header.title": "پنل ادمین",
@@ -503,7 +504,7 @@ dicts.en = {
    "err.setpoint.forbidden": "اجازه تنظیم دمای این پکیج را ندارید",
    "err.setpoint.unreachable": "ارتباط با پکیج برقرار نشد",
    "err.setpoint.send": "خطا در ارسال تنظیم دما به پکیج",
-  "toggle.on": "روشن",
+  "toggle.on": "سرد",
   "toggle.off": "خاموش",
   "starting.off": "در حال خاموش شدن...",
   "starting.on": "در حال روشن شدن...",
@@ -511,9 +512,19 @@ dicts.en = {
   "setpoint.current": "دمای تنظیم شده:",
   "setpoint.apply": "اعمال دمای جدید",
   "temp.current": "دمای فعلی:",
+  "disconnected": "اتصال قطع می باشد",
   "timer.cancel": "حذف زمان‌بندی",
   "modal.close": "بستن",
   "timer.submit": "ثبت زمان‌بندی",
+  "season.label": "حالت فصل",
+  "season.summer": "تابستان",
+  "season.winter": "زمستان",
+  "no.access.season": "شما دسترسی تغییر حالت فصل را ندارید",
+  "ok.season.set": "حالت فصل با موفقیت اعمال شد",
+  "err.season.forbidden": "اجازه تغییر حالت فصل را ندارید",
+  "err.season.unreachable": "ارتباط با پکیج برقرار نشد",
+  "err.season.send": "خطا در ارسال حالت فصل",
+  "toggle.fan": "فن"
  };
  dicts.ar = {
    ...dicts.ar,
@@ -577,7 +588,7 @@ dicts.en = {
    "err.setpoint.forbidden": "غير مسموح بضبط درجة حرارة هذه الحزمة",
    "err.setpoint.unreachable": "تعذر الاتصال بالحزمة",
    "err.setpoint.send": "خطأ في إرسال إعداد درجة الحرارة",
-  "toggle.on": "تشغيل",
+  "toggle.on": "بارد",
   "toggle.off": "إيقاف",
   "starting.off": "جارٍ الإيقاف...",
   "starting.on": "جارٍ التشغيل...",
@@ -585,9 +596,19 @@ dicts.en = {
   "setpoint.current": "الحرارة المضبوطة:",
   "setpoint.apply": "تطبيق درجة الحرارة",
   "temp.current": "الحرارة الحالية:",
+  "disconnected": "غیر متصل",
   "timer.cancel": "إلغاء الجدولة",
   "modal.close": "إغلاق",
   "timer.submit": "حفظ الجدولة",
+  "season.label": "وضع الموسم",
+  "season.summer": "الصيف",
+  "season.winter": "الشتاء",
+  "no.access.season": "ليست لديك صلاحية تغيير وضع الموسم",
+  "ok.season.set": "تم تطبيق وضع الموسم بنجاح",
+  "err.season.forbidden": "غير مسموح بتغيير وضع الموسم",
+  "err.season.unreachable": "تعذر الاتصال بالحزمة",
+  "err.season.send": "خطأ في إرسال وضع الموسم",
+  "toggle.fan": "فن"
  };
  dicts.en = {
    ...dicts.en,
@@ -651,7 +672,7 @@ dicts.en = {
    "err.setpoint.forbidden": "You are not allowed to set temperature",
    "err.setpoint.unreachable": "Failed to connect to chiller",
    "err.setpoint.send": "Error sending setpoint to chiller",
-  "toggle.on": "ON",
+  "toggle.on": "COOL",
   "toggle.off": "OFF",
   "starting.off": "Turning OFF...",
   "starting.on": "Turning ON...",
@@ -659,9 +680,19 @@ dicts.en = {
   "setpoint.current": "Current setpoint:",
   "setpoint.apply": "Apply new setpoint",
   "temp.current": "Current temperature:",
+  "disconnected": "disconnected",
   "timer.cancel": "Cancel schedule",
   "modal.close": "Close",
   "timer.submit": "Save schedule",
+  "season.label": "Season mode",
+  "season.summer": "Summer",
+  "season.winter": "Winter",
+  "no.access.season": "You are not allowed to change season mode",
+  "ok.season.set": "Season mode applied successfully",
+  "err.season.forbidden": "You are not allowed to change season",
+  "err.season.unreachable": "Failed to connect to chiller",
+  "err.season.send": "Error sending season mode",
+  "toggle.fan": "FAN"
  };
  
  function nextDir(locale: Locale) {

@@ -39,6 +39,7 @@ type User = {
   role: UserRole;
   active: boolean;
   permissions?: Permissions;
+
 };
 
 export type Chiller = {
@@ -62,6 +63,13 @@ export type TimerItem = {
   updatedAt: string;
 };
 
+export type TabItem = {
+  chillerIds: string;
+  id: string;
+  name: string;
+  active: boolean;
+};
+
 export type Settings = {
   progressOnSeconds: number;
   progressOffSeconds: number;
@@ -81,6 +89,7 @@ type DbShape = {
   chillers: Chiller[];
   timers: TimerItem[];
   settings?: Settings;
+  tabs: TabItem[];
 };
 
 function projectRootDir() {
@@ -130,7 +139,7 @@ function hashPassword(password: string) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-function readDb(): DbShape {
+export function readDb(): DbShape {
   const file = dbFilePath();
   if (!fs.existsSync(file)) {
     const initial: DbShape = {
@@ -162,6 +171,7 @@ function readDb(): DbShape {
         progressOnSeconds: 60,
         progressOffSeconds: 60,
       },
+      tabs: [],
     };
     fs.writeFileSync(file, JSON.stringify(initial, null, 2), "utf8");
     return initial;
@@ -290,6 +300,14 @@ function readDb(): DbShape {
               )
             : {},
       },
+      tabs: Array.isArray(parsed.tabs)
+        ? parsed.tabs.map((t) => ({
+            id: String(t.id || ""),
+            name: String(t.name || ""),
+            active: !!t.active,
+            chillerIds: String(t.chillerIds || ""),
+          }))
+        : [],
     };
     return db;
   } catch (error: unknown) {
@@ -373,13 +391,14 @@ function readDb(): DbShape {
         progressOffSeconds: 60,
         byChiller: {},
       },
+      tabs: [],
     };
     fs.writeFileSync(file, JSON.stringify(fallback, null, 2), "utf8");
     return fallback;
   }
 }
 
-function writeDb(data: DbShape) {
+export function writeDb(data: DbShape) {
   const file = dbFilePath();
   let merged: DbShape = data;
   try {
@@ -413,6 +432,11 @@ function writeDb(data: DbShape) {
             ? cur.timers as TimerItem[]
             : [],
         settings: data.settings ?? cur.settings ?? { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
+        tabs: Array.isArray(data.tabs)
+          ? data.tabs
+          : Array.isArray((cur as { tabs?: unknown }).tabs)
+            ? ((cur as { tabs?: unknown }).tabs as TabItem[])
+            : [],
       };
     }
   } catch {
@@ -423,6 +447,7 @@ function writeDb(data: DbShape) {
       chillers: Array.isArray(data.chillers) ? data.chillers : [],
       timers: Array.isArray(data.timers) ? data.timers : [],
       settings: data.settings ?? { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
+      tabs: Array.isArray(data.tabs) ? data.tabs : [],
     };
   }
   const tmp = file + ".tmp";
@@ -620,6 +645,7 @@ export function resetDbKeepUsers(usernames: string[]) {
     users: keepUsers,
     chillers: [],
     timers: [],
+    tabs: [],
     settings: { progressOnSeconds: 60, progressOffSeconds: 60, byChiller: {} },
   };
   writeDb(next);
@@ -779,4 +805,62 @@ export function getEffectiveProgressForChiller(chillerId: string): {
         ? override.progressOffSeconds
         : global.progressOffSeconds,
   };
+  
+}
+export function getActivityLogsAdvanced(options: {
+  username?: string;
+  chillerName?: string;
+  action?: string;
+  fromDate?: string;
+  toDate?: string;
+  weekday?: number;
+  limit: number;
+  offset: number;
+}): { items: ActivityLog[]; total: number } {
+  let logs = getActivityLogs(10000);
+  
+  // فیلتر بر اساس username
+  if (options.username) {
+    logs = logs.filter(l => 
+      l.username && l.username.toLowerCase().includes(options.username!.toLowerCase())
+    );
+  }
+  
+  // فیلتر بر اساس chillerName (با چک کردن details)
+  if (options.chillerName) {
+    logs = logs.filter(l => {
+      const details = l.details as Record<string, unknown> | null | undefined;
+      const target = 
+        (details?.target as string) || 
+        (details?.name as string) || 
+        (details?.chillerName as string) || 
+        "";
+      return target.toLowerCase().includes(options.chillerName!.toLowerCase());
+    });
+  }
+  
+  // فیلتر بر اساس action
+  if (options.action) {
+    logs = logs.filter(l => l.action === options.action);
+  }
+  
+  // فیلتر بر اساس از تاریخ
+  if (options.fromDate) {
+    logs = logs.filter(l => l.at >= options.fromDate!);
+  }
+  
+  // فیلتر بر اساس تا تاریخ
+  if (options.toDate) {
+    logs = logs.filter(l => l.at <= options.toDate!);
+  }
+  
+  // فیلتر بر اساس روز هفته
+  if (options.weekday !== undefined) {
+    logs = logs.filter(l => new Date(l.at).getDay() === options.weekday);
+  }
+  
+  const total = logs.length;
+  const items = logs.slice(options.offset, options.offset + options.limit);
+  
+  return { items, total };
 }

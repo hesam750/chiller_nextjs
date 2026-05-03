@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { PwaClient } from "./_components/PwaClient";
 import { cookies } from "next/headers";
 import { I18nProvider } from "./_components/i18n";
 import { LanguageSwitcher } from "./_components/LanguageSwitcher";
 
-const vazirmatn = Vazirmatn({
-  subsets: ["arabic"],
-  weight: ["300", "400", "500", "700"],
+
+const byekan = localFont({
+  src: "/app/fonts/BYekan.ttf", 
 });
 
 export const metadata: Metadata = {
@@ -43,7 +43,7 @@ export default async function RootLayout({
   const dir = initialLocale === "en" ? "ltr" : "rtl";
   return (
     <html lang={initialLocale} dir={dir}>
-      <body className={`antialiased ${vazirmatn.className}`}>
+      <body className={`antialiased ${byekan.className}`}>
         <I18nProvider initialLocale={initialLocale}>
           <LanguageSwitcher />
           {children}
