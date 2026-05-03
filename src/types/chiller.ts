@@ -9,31 +9,15 @@ export interface ChillerProps {
   name: string;
   ip: string;
   active: boolean;
-  mode: PowerMode;
+  isDark: boolean;
   canControl: boolean;
   progressOnSeconds: number;
   progressOffSeconds: number;
 
-  // اصلاح: قبلاً () => void بود
-  onTogglePower: (payload: {
-    name: string;
-    ip: string;
-    next: boolean;
-  }) => Promise<{ ok: boolean }>;
-
-  // اصلاح: قبلاً (setpoint: number) => void بود
-  onApplySetpoint: (payload: {
-    name: string;
-    ip: string;
-    value: number;
-  }) => Promise<{ ok: boolean; actual?: number | null }>;
-
-  // اصلاح: قبلاً (season: SeasonMode) => void بود
-  onChangeSeason: (payload: {
-    name: string;
-    ip: string;
-    season: "winter" | "summer";
-  }) => Promise<{ ok: boolean }>;
+  // callback signatures matching DashboardPage usage
+  onTogglePower: (payload: { next: boolean }) => void;
+  onApplySetpoint: (value: number) => void;
+  onChangeSeason: (season: "winter" | "summer") => void;
 }
 
 // ... بقیه اینترفیس‌ها بدون تغییر

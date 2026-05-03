@@ -20,7 +20,7 @@ export function ChillerCard({
   name,
   ip,
   active,
-  mode,
+  isDark,
   canControl,
   progressOnSeconds,
   progressOffSeconds,
